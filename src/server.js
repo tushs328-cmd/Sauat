@@ -41,6 +41,7 @@ export function createApp({ dataPath = defaultDataPath } = {}) {
 
   app.get('/api/student/next-task', requireAuth('student'), (req, res) => {
     const state = storage.read();
+    const requestedLang = ['ru', 'kz'].includes(req.query.lang) ? req.query.lang : null;
     const mine = state.attempts.filter((a) => a.studentKey === studentKey(req.user));
     const skills = ['find', 'infer', 'evaluate', 'math'];
     const stats = Object.fromEntries(skills.map((skill) => {
@@ -50,9 +51,10 @@ export function createApp({ dataPath = defaultDataPath } = {}) {
     const weakest = skills.sort((a, b) => stats[a] - stats[b])[0];
     const targetDifficulty = stats[weakest] < 0.5 ? 1 : stats[weakest] < 0.8 ? 2 : 3;
     const answered = new Set(mine.slice(-12).map((a) => a.taskId));
-    const candidate = taskBank.find((task) => task.skill === weakest && task.difficulty === targetDifficulty && !answered.has(task.id))
-      || taskBank.find((task) => task.skill === weakest && !answered.has(task.id))
-      || taskBank.find((task) => !answered.has(task.id)) || taskBank[0];
+    const pool = requestedLang ? taskBank.filter((task) => task.lang === requestedLang) : taskBank;
+    const candidate = pool.find((task) => task.skill === weakest && task.difficulty === targetDifficulty && !answered.has(task.id))
+      || pool.find((task) => task.skill === weakest && !answered.has(task.id))
+      || pool.find((task) => !answered.has(task.id)) || pool[0] || taskBank[0];
     res.json({ task: publicTask(candidate), recommendation: { skill: weakest, accuracy: stats[weakest], difficulty: targetDifficulty }, mode: modeLabel() });
   });
 
