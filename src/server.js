@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import { createStorage } from './storage.js';
 import { clearSessions, getClassCodes, login, requireAuth } from './auth.js';
 import { getTask, publicTask, taskBank, taskCounts } from './taskBank.js';
-import { askLocalMentor } from './ai.js';
+import { askLocalGrader, askLocalMentor } from './ai.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '..');
@@ -59,15 +59,18 @@ export function createApp({ dataPath = defaultDataPath } = {}) {
     res.json({ task: publicTask(candidate), recommendation: { skill: weakest, accuracy: stats[weakest], difficulty: targetDifficulty }, mode: modeLabel() });
   });
 
-  app.post('/api/student/answer', requireAuth('student'), (req, res) => {
+  app.post('/api/student/answer', requireAuth('student'), async (req, res) => {
     const state = storage.read();
     const task = getStateTask(safeString(req.body.taskId, 100), state);
     if (!task) return res.status(404).json({ error: 'Задание не найдено' });
-    const selected = Number(req.body.answer);
-    const correct = Number.isInteger(selected) && selected === task.answer;
+    const isFree = task.answerMode === 'free';
+    const selected = isFree ? safeString(req.body.text, 2000) : Number(req.body.answer);
+    const ruleMatches = isFree ? gradeFreeAnswer(task, selected) : Number.isInteger(selected) && selected === task.answer;
+    const aiResult = isFree && !ruleMatches ? await askLocalGrader({ task, text: selected }) : null;
+    const correct = ruleMatches || aiResult === true;
     const attempt = { id: `${Date.now()}-${Math.random().toString(16).slice(2)}`, studentKey: studentKey(req.user), studentName: req.user.name, classId: req.user.classId, taskId: task.id, skill: task.skill, subject: task.subject, lang: task.lang, difficulty: task.difficulty, selected, correct, createdAt: new Date().toISOString() };
     storage.update((state) => { state.attempts.push(attempt); return state; });
-    res.json({ correct, skill: task.skill, quote: task.quote, feedback: correct ? 'Верно: вы нашли опору в источнике.' : 'Пока не совпало. Сверьте ответ с цитатой и попробуйте ещё раз.', explanation: correct ? task.explanation : null, mode: modeLabel() });
+    res.json({ correct, skill: task.skill, quote: task.quote, feedback: correct ? 'Верно: вы нашли опору в источнике.' : 'Не могу подтвердить ответ по тексту. Сверьте ключевые понятия с цитатой и попробуйте ещё раз.', explanation: correct ? task.explanation : null, mode: modeLabel() });
   });
 
   app.get('/api/student/progress', requireAuth('student'), (req, res) => {
@@ -176,6 +179,13 @@ export function createApp({ dataPath = defaultDataPath } = {}) {
 
 function studentKey(user) { return `${user.classId}:${user.name.toLowerCase()}`; }
 function getStateTask(taskId, state) { return getTask(taskId) || (state.draftTasks || []).find((task) => task.id === taskId); }
+function normalizeAnswer(value) { return String(value || '').toLowerCase().replace(/ё/g, 'е').replace(/[^\p{L}\p{N}%]+/gu, ' ').trim(); }
+function gradeFreeAnswer(task, answer) {
+  const normalized = normalizeAnswer(answer);
+  const keywords = (task.keywords || []).map(normalizeAnswer).filter((word) => word.length > 3 && !['это', 'этот', 'текст', 'можно', 'нужно'].includes(word));
+  const matches = keywords.filter((word) => normalized.includes(word));
+  return matches.length >= Math.min(2, keywords.length);
+}
 function percent(value, total) { return total ? Math.round((value / total) * 100) : 0; }
 function progressFor(rows) {
   const skills = ['find', 'infer', 'evaluate', 'math'];

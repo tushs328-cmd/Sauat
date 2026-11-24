@@ -14,7 +14,7 @@ const packs = [
   },
   {
     id: 'read-train', subject: 'reading', lang: 'ru', title: 'Расписание пригородного поезда',
-    text: 'Пригородный поезд отправляется со станции Северная в 7:20 и прибывает на станцию Речная в 8:05. По будням он делает остановку у посёлка Озёрный на четыре минуты. В субботу рейс отправляется на десять минут позже.',
+    text: 'Пригородный поезд отправляется со станции Северная в 7:20 и прибывает на станцию Речная в 8:05. По будням он делает остановку у посёлка Озёрный на четыре минуты. В субботу рейс отправляется на десять минут позже.', visual: { type: 'table', caption: 'Расписание рейса', headers: ['День', 'Отправление', 'Прибытие'], rows: [['Будни', '07:20', '08:05'], ['Суббота', '07:30', '08:15']] },
     fact: 'В субботу отправление происходит в 7:30.', numberFact: 'Поезд идёт от Северной до Речной 45 минут без учёта остановки.', inference: 'Пассажиру из Озёрного в будний день нужно учесть дополнительную остановку.', purpose: 'Дать пассажирам сведения для планирования поездки.', transfer: 'При планировании встречи важно учитывать день недели и остановки.', quote: 'В субботу рейс отправляется на десять минут позже.'
   },
   {
@@ -39,7 +39,7 @@ const packs = [
   },
   {
     id: 'math-discount', subject: 'math', lang: 'ru', title: 'Скидка на рюкзак',
-    text: 'Рюкзак стоит 12 000 тенге. В школьной акции на него действует скидка 15 процентов. На кассе сначала считают скидку, а затем вычитают её из первоначальной цены.',
+    text: 'Рюкзак стоит 12 000 тенге. В школьной акции на него действует скидка 15 процентов. На кассе сначала считают скидку, а затем вычитают её из первоначальной цены.', visual: { type: 'bar', caption: 'Цена до и после скидки', values: [{ label: 'До', value: 12000 }, { label: 'После', value: 10200 }] },
     fact: 'Размер скидки равен 1 800 тенге.', numberFact: 'Цена после скидки составляет 10 200 тенге.', inference: 'Скидка 15 процентов не означает, что покупатель платит 15 процентов цены.', purpose: 'Показать порядок расчёта цены со скидкой.', transfer: 'Чтобы проверить ценник, можно умножить исходную цену на 0,85.', quote: 'На него действует скидка 15 процентов.'
   },
   {
@@ -74,11 +74,11 @@ function questionsFor(pack) {
     wrong1: 'В тексте об этом не сказано.', wrong2: 'Это утверждение противоречит тексту.', wrong3: 'Это предположение, текст его не подтверждает.'
   };
   return [
-    { skill: 'find', difficulty: 1, question: q.find, options: [pack.fact, q.wrong1, q.wrong2], answer: 0, quote: pack.quote, explanation: pack.fact },
-    { skill: 'find', difficulty: 1, question: q.number, options: [pack.numberFact, q.wrong2, q.wrong3], answer: 0, quote: pack.quote, explanation: pack.numberFact },
-    { skill: 'infer', difficulty: 2, question: q.infer, options: [pack.inference, q.wrong1, q.wrong3], answer: 0, quote: pack.quote, explanation: pack.inference },
-    { skill: 'evaluate', difficulty: 2, question: q.evaluate, options: [pack.purpose, q.wrong1, q.wrong2], answer: 0, quote: pack.quote, explanation: pack.purpose },
-    { skill: pack.subject === 'math' ? 'math' : 'evaluate', difficulty: 3, question: q.apply, options: [pack.transfer, q.wrong1, q.wrong3], answer: 0, quote: pack.quote, explanation: pack.transfer }
+    { skill: 'find', difficulty: 1, answerMode: 'choice', question: q.find, options: [pack.fact, q.wrong1, q.wrong2], answer: 0, quote: pack.quote, explanation: pack.fact, keywords: pack.fact.split(/\s+/) },
+    { skill: 'find', difficulty: 1, answerMode: 'choice', question: q.number, options: [pack.numberFact, q.wrong2, q.wrong3], answer: 0, quote: pack.quote, explanation: pack.numberFact, keywords: pack.numberFact.split(/\s+/) },
+    { skill: 'infer', difficulty: 2, answerMode: 'choice', question: q.infer, options: [pack.inference, q.wrong1, q.wrong3], answer: 0, quote: pack.quote, explanation: pack.inference, keywords: pack.inference.split(/\s+/) },
+    { skill: 'evaluate', difficulty: 2, answerMode: 'choice', question: q.evaluate, options: [pack.purpose, q.wrong1, q.wrong2], answer: 0, quote: pack.quote, explanation: pack.purpose, keywords: pack.purpose.split(/\s+/) },
+    { skill: pack.subject === 'math' ? 'math' : 'evaluate', difficulty: 3, answerMode: 'free', question: q.apply, options: [], answer: 0, quote: pack.quote, explanation: pack.transfer, keywords: pack.transfer.split(/\s+/) }
   ];
 }
 
@@ -88,6 +88,7 @@ export const taskBank = packs.flatMap((pack) => questionsFor(pack).map((question
   subject: pack.subject,
   lang: pack.lang,
   text: pack.text,
+  visual: pack.visual,
   type: 'choice',
   ...question
 })));
@@ -104,6 +105,6 @@ export function getTask(taskId) {
 
 export function publicTask(task) {
   if (!task) return null;
-  const { answer, explanation, ...safe } = task;
+  const { answer, explanation, keywords, ...safe } = task;
   return safe;
 }
