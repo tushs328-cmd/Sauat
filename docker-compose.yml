@@ -1,0 +1,44 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: 3000
+      OLLAMA_URL: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:1.5b}
+    volumes:
+      - saulat_data:/app/data
+    networks:
+      - saulat_internal
+    depends_on:
+      - ollama
+  ollama:
+    image: ollama/ollama:latest
+    command: serve
+    volumes:
+      - ollama_models:/root/.ollama
+    networks:
+      - saulat_internal
+      - model_egress
+  model-init:
+    image: ollama/ollama:latest
+    environment:
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:1.5b}
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["until ollama list >/dev/null 2>&1; do sleep 2; done; ollama pull $${OLLAMA_MODEL}"]
+    volumes:
+      - ollama_models:/root/.ollama
+    networks:
+      - saulat_internal
+      - model_egress
+    depends_on:
+      - ollama
+networks:
+  saulat_internal:
+    internal: true
+  model_egress: {}
+volumes:
+  saulat_data:
+  ollama_models:

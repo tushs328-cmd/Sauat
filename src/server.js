@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import { createStorage } from './storage.js';
 import { clearSessions, getClassCodes, login, requireAuth } from './auth.js';
 import { getTask, publicTask, taskBank, taskCounts } from './taskBank.js';
+import { askLocalMentor } from './ai.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '..');
@@ -79,13 +80,14 @@ export function createApp({ dataPath = defaultDataPath } = {}) {
     res.json({ assignments: state.assignments.filter((a) => a.classId === req.user.classId && a.published).map((a) => ({ ...a, tasks: a.taskIds.map((id) => getStateTask(id, state)).filter(Boolean).map(publicTask) })) });
   });
 
-  app.post('/api/student/mentor', requireAuth('student'), (req, res) => {
+  app.post('/api/student/mentor', requireAuth('student'), async (req, res) => {
     const task = getStateTask(safeString(req.body.taskId, 100), storage.read());
     const level = Math.min(Math.max(Number(req.body.level) || 1, 1), 3);
     const attempted = Boolean(req.body.attempted);
     if (!task) return res.status(404).json({ error: 'Задание не найдено' });
     if (level === 3 && !attempted) return res.json({ level, requiresAttempt: true, message: 'Сначала выберите свой ответ — после попытки разберём ход решения.', quote: task.quote });
-    const content = level === 1 ? 'Посмотрите на предложение, где описан факт или число из вопроса.' : level === 2 ? 'Какое слово или число в вопросе нужно подтвердить прямо цитатой?' : `Разбор: сопоставьте вопрос с цитатой, затем объясните, почему один вариант лучше других. Опора: ${task.explanation}`;
+    const aiContent = level > 1 ? await askLocalMentor({ task, level }) : null;
+    const content = aiContent || (level === 1 ? 'Посмотрите на предложение, где описан факт или число из вопроса.' : level === 2 ? 'Какое слово или число в вопросе нужно подтвердить прямо цитатой?' : `Разбор: сопоставьте вопрос с цитатой, затем объясните, почему один вариант лучше других. Опора: ${task.explanation}`);
     res.json({ level, message: content, quote: task.quote, readyAnswer: false });
   });
 

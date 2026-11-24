@@ -1,0 +1,10 @@
+{
+  "name": "Сауат — функциональная грамотность",
+  "short_name": "Сауат",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f7f2",
+  "theme_color": "#0d3b3b",
+  "lang": "ru",
+  "description": "Офлайн-платформа для чтения, понимания и математики в жизни"
+}
