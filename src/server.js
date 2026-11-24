@@ -59,7 +59,8 @@ export function createApp({ dataPath = defaultDataPath } = {}) {
   });
 
   app.post('/api/student/answer', requireAuth('student'), (req, res) => {
-    const task = getTask(safeString(req.body.taskId, 100));
+    const state = storage.read();
+    const task = getStateTask(safeString(req.body.taskId, 100), state);
     if (!task) return res.status(404).json({ error: 'Задание не найдено' });
     const selected = Number(req.body.answer);
     const correct = Number.isInteger(selected) && selected === task.answer;
@@ -75,11 +76,11 @@ export function createApp({ dataPath = defaultDataPath } = {}) {
 
   app.get('/api/student/assignments', requireAuth('student'), (req, res) => {
     const state = storage.read();
-    res.json({ assignments: state.assignments.filter((a) => a.classId === req.user.classId && a.published).map((a) => ({ ...a, tasks: a.taskIds.map(getTask).filter(Boolean).map(publicTask) })) });
+    res.json({ assignments: state.assignments.filter((a) => a.classId === req.user.classId && a.published).map((a) => ({ ...a, tasks: a.taskIds.map((id) => getStateTask(id, state)).filter(Boolean).map(publicTask) })) });
   });
 
   app.post('/api/student/mentor', requireAuth('student'), (req, res) => {
-    const task = getTask(safeString(req.body.taskId, 100));
+    const task = getStateTask(safeString(req.body.taskId, 100), storage.read());
     const level = Math.min(Math.max(Number(req.body.level) || 1, 1), 3);
     const attempted = Boolean(req.body.attempted);
     if (!task) return res.status(404).json({ error: 'Задание не найдено' });
@@ -103,9 +104,29 @@ export function createApp({ dataPath = defaultDataPath } = {}) {
       }
       if (text.length < 30) return res.status(400).json({ error: 'Добавьте текст не короче 30 символов' });
       const source = { id: `source-${Date.now()}`, title, text, createdAt: new Date().toISOString(), createdBy: req.user.name };
-      storage.update((state) => { state.sourceTexts.push(source); return state; });
-      res.json({ source, generated: generateTeacherTasks(source) });
+      const generated = generateTeacherTasks(source);
+      storage.update((state) => { state.sourceTexts.push(source); state.draftTasks = [...(state.draftTasks || []), ...generated]; return state; });
+      res.json({ source, generated });
     } catch (error) { res.status(400).json({ error: `Не удалось прочитать файл: ${error.message}` }); }
+  });
+
+  app.get('/api/teacher/drafts', requireAuth('teacher'), (req, res) => {
+    const state = storage.read();
+    res.json({ drafts: state.draftTasks || [] });
+  });
+
+  app.patch('/api/teacher/drafts/:id', requireAuth('teacher'), (req, res) => {
+    const draftId = safeString(req.params.id, 120);
+    const state = storage.update((nextState) => {
+      const draft = (nextState.draftTasks || []).find((item) => item.id === draftId);
+      if (!draft) return nextState;
+      if (typeof req.body.question === 'string') draft.question = safeString(req.body.question, 500);
+      if (Array.isArray(req.body.options) && req.body.options.length >= 2) draft.options = req.body.options.slice(0, 4).map((item) => safeString(item, 300));
+      return nextState;
+    });
+    const updated = (state.draftTasks || []).find((item) => item.id === draftId);
+    if (!updated) return res.status(404).json({ error: 'Черновик не найден' });
+    res.json({ draft: updated });
   });
 
   app.get('/api/teacher/overview', requireAuth('teacher'), (req, res) => {
@@ -113,16 +134,17 @@ export function createApp({ dataPath = defaultDataPath } = {}) {
     const attempts = state.attempts;
     const skills = ['find', 'infer', 'evaluate', 'math'];
     const skillMap = Object.fromEntries(skills.map((skill) => { const rows = attempts.filter((a) => a.skill === skill); return [skill, { attempts: rows.length, accuracy: percent(rows.filter((a) => a.correct).length, rows.length) }]; }));
-    const hard = [...new Map(attempts.map((a) => [a.taskId, a])).values()].map((a) => { const rows = attempts.filter((x) => x.taskId === a.taskId); return { taskId: a.taskId, title: getTask(a.taskId)?.title || 'Авторское задание', accuracy: percent(rows.filter((x) => x.correct).length, rows.length), attempts: rows.length }; }).sort((a, b) => a.accuracy - b.accuracy).slice(0, 5);
+    const hard = [...new Map(attempts.map((a) => [a.taskId, a])).values()].map((a) => { const rows = attempts.filter((x) => x.taskId === a.taskId); return { taskId: a.taskId, title: getStateTask(a.taskId, state)?.title || 'Авторское задание', accuracy: percent(rows.filter((x) => x.correct).length, rows.length), attempts: rows.length }; }).sort((a, b) => a.accuracy - b.accuracy).slice(0, 5);
     const students = [...new Map(attempts.map((a) => [a.studentKey, a.studentName])).entries()].map(([key, name]) => { const rows = attempts.filter((a) => a.studentKey === key); return { name, attempts: rows.length, accuracy: percent(rows.filter((a) => a.correct).length, rows.length), status: percent(rows.filter((a) => a.correct).length, rows.length) < 60 ? 'Нужна поддержка' : 'В движении' }; });
     res.json({ className: '7–9 классы', skillMap, hardQuestions: hard, students, weekly: weekly(attempts) });
   });
 
   app.post('/api/teacher/assignments', requireAuth('teacher'), (req, res) => {
-    const taskIds = Array.isArray(req.body.taskIds) ? req.body.taskIds.map((id) => safeString(id, 100)).filter((id) => getTask(id)) : [];
+    const state = storage.read();
+    const taskIds = Array.isArray(req.body.taskIds) ? req.body.taskIds.map((id) => safeString(id, 120)).filter((id) => getStateTask(id, state)) : [];
     if (!taskIds.length) return res.status(400).json({ error: 'Выберите хотя бы одно задание' });
     const assignment = { id: `assignment-${Date.now()}`, title: safeString(req.body.title, 120) || 'Задание класса', classId: safeString(req.body.classId, 40) || 'class-7a', taskIds, dueDate: safeString(req.body.dueDate, 20) || null, published: Boolean(req.body.published), createdAt: new Date().toISOString() };
-    storage.update((state) => { state.assignments.push(assignment); return state; });
+    storage.update((nextState) => { nextState.assignments.push(assignment); return nextState; });
     res.json({ assignment });
   });
 
@@ -142,7 +164,7 @@ export function createApp({ dataPath = defaultDataPath } = {}) {
   app.post('/api/admin/restore', requireAuth('admin'), (req, res) => {
     const incoming = req.body?.state;
     if (!incoming || !Array.isArray(incoming.attempts) || !Array.isArray(incoming.assignments)) return res.status(400).json({ error: 'Неверный формат резервной копии' });
-    storage.write({ attempts: incoming.attempts, assignments: incoming.assignments, sourceTexts: Array.isArray(incoming.sourceTexts) ? incoming.sourceTexts : [], settings: incoming.settings || { schoolName: 'Сауат', syncEnabled: false } });
+    storage.write({ attempts: incoming.attempts, assignments: incoming.assignments, sourceTexts: Array.isArray(incoming.sourceTexts) ? incoming.sourceTexts : [], draftTasks: Array.isArray(incoming.draftTasks) ? incoming.draftTasks : [], settings: incoming.settings || { schoolName: 'Сауат', syncEnabled: false } });
     res.json({ ok: true });
   });
 
@@ -151,6 +173,7 @@ export function createApp({ dataPath = defaultDataPath } = {}) {
 }
 
 function studentKey(user) { return `${user.classId}:${user.name.toLowerCase()}`; }
+function getStateTask(taskId, state) { return getTask(taskId) || (state.draftTasks || []).find((task) => task.id === taskId); }
 function percent(value, total) { return total ? Math.round((value / total) * 100) : 0; }
 function progressFor(rows) {
   const skills = ['find', 'infer', 'evaluate', 'math'];
@@ -178,7 +201,7 @@ function weekly(rows) {
 }
 function generateTeacherTasks(source) {
   const sentences = source.text.split(/(?<=[.!?])\s+/).filter(Boolean).slice(0, 5);
-  return sentences.map((sentence, index) => ({ id: `draft-${source.id}-${index + 1}`, skill: index % 3 === 0 ? 'find' : index % 3 === 1 ? 'infer' : 'evaluate', question: index % 3 === 0 ? 'Какой факт прямо указан в предложении?' : index % 3 === 1 ? 'Какой вывод можно сделать?' : 'Зачем этот фрагмент нужен читателю?', source: sentence, status: 'draft' }));
+  return sentences.map((sentence, index) => ({ id: `draft-${source.id}-${index + 1}`, title: source.title, subject: 'reading', lang: 'ru', type: 'choice', difficulty: index % 3 + 1, skill: index % 3 === 0 ? 'find' : index % 3 === 1 ? 'infer' : 'evaluate', text: sentence, quote: sentence, question: index % 3 === 0 ? 'Какой факт прямо указан в предложении?' : index % 3 === 1 ? 'Какой вывод можно сделать?' : 'Зачем этот фрагмент нужен читателю?', options: [sentence, 'В тексте этого не сказано.', 'Это предположение без опоры на текст.'], answer: 0, explanation: 'Сверьте формулировку вопроса с указанным предложением.', status: 'draft' }));
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url))) {

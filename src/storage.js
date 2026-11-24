@@ -8,6 +8,7 @@ export function createStorage(filePath) {
     attempts: [],
     assignments: [],
     sourceTexts: [],
+    draftTasks: [],
     settings: { schoolName: 'Сауат', syncEnabled: false }
   };
   function read() {
