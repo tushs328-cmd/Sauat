@@ -20,5 +20,6 @@
 | patil-suraj/question_generation | master@c30e297 | MIT | [GitHub](https://github.com/patil-suraj/question_generation) | Структура заданий функциональной грамотности, шкалы оценки и пайплайн черновой генерации вопросов по тексту. (только идея/формат модели оценивания (свои задания пишем сами)) | предложено |
 | open-spaced-repetition/free-spaced-repetition-scheduler | main@93ed713 | MIT | [GitHub](https://github.com/open-spaced-repetition/free-spaced-repetition-scheduler) | Алгоритм интервального повторения (FSRS/Leitner) для повторения слабых навыков чтения и математики. (копирование чистой функции расчёта интервалов (с атрибуцией)) | предложено |
 | IS2AI/Kazakh_TTS | main@fc90604 | CC-BY-4.0 | [GitHub](https://github.com/IS2AI/Kazakh_TTS) | Открытый казахский корпус/словарь/аудиоданные для проверки лемматизатора, TTS/ASR и языкового тестирования. (выборочная проверка датасета (данные не переносить в банк без проверки README)) | предложено |
+| ajv | 8.20.0 (package-lock.json) | MIT | [npm](https://www.npmjs.com/package/ajv) | Проверка историй по `docs/sauat/schema.json` перед сборкой манифеста и публикацией контента. | использовано |
 
-> Базовые уже установленные пакеты приложения (`express`, `multer`, `pdf-parse`) зафиксированы в `package.json` и `package-lock.json`.
+> Базовые уже установленные пакеты приложения (`express`, `multer`, `pdf-parse`) и `ajv` зафиксированы в `package.json` и `package-lock.json`.

@@ -7,6 +7,9 @@ import { createStorage } from './storage.js';
 import { clearSessions, getClassCodes, login, requireAuth } from './auth.js';
 import { getTask, publicTask, taskBank, taskCounts } from './taskBank.js';
 import { askLocalGrader, askLocalMentor } from './ai.js';
+import { getManifest, getStoryForPublic } from './content.js';
+import { extractEvents, ingestEvents, summarizeEvents } from './events.js';
+import { askStructuredMentor, getMentorContext } from './mentor.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const root = path.resolve(here, '..');
@@ -15,22 +18,104 @@ const defaultDataPath = process.env.SAULAT_DATA_FILE || path.join(root, 'data', 
 function today() { return new Date().toISOString().slice(0, 10); }
 function safeString(value, max = 10000) { return String(value ?? '').trim().slice(0, max); }
 function modeLabel() { return process.env.OLLAMA_URL ? 'ИИ (локальная Ollama, если доступна)' : 'Без ИИ (офлайн-банк)'; }
+function contentOptions() { return { includeFixture: process.env.SAULAT_INCLUDE_FIXTURE === '1' && process.env.NODE_ENV !== 'production' }; }
+
+function validateMentorInput(body) {
+  const keys = ['storyId', 'taskId', 'skill', 'errorProfile', 'lang'];
+  if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some((key) => !keys.includes(key))) return 'Разрешены только ID, язык, навык и errorProfile.';
+  if (!/^[a-z0-9_]{1,80}$/.test(body.storyId || '') || !/^t[0-9]+$/.test(body.taskId || '')) return 'storyId и taskId должны быть безопасными ID.';
+  if (!['find', 'infer', 'evidence'].includes(body.skill) || !['kk', 'ru'].includes(body.lang)) return 'Недопустимый skill или lang.';
+  const profile = body.errorProfile;
+  const profileKeys = ['answerWrong', 'evidenceWrong', 'attempt', 'hintsUsed', 'lastHintLevel'];
+  if (!profile || typeof profile !== 'object' || Array.isArray(profile) || Object.keys(profile).some((key) => !profileKeys.includes(key))) return 'Неверный errorProfile.';
+  if (typeof profile.answerWrong !== 'boolean' || typeof profile.evidenceWrong !== 'boolean') return 'Ошибки в errorProfile должны быть boolean.';
+  if (![profile.attempt, profile.hintsUsed, profile.lastHintLevel].every((value) => Number.isInteger(value) && value >= 0 && value <= 100)) return 'Числа errorProfile должны быть целыми от 0 до 100.';
+  return null;
+}
+
+function makeRateLimiter(limit = 30, windowMs = 60_000) {
+  const buckets = new Map();
+  return (key) => {
+    const now = Date.now();
+    const bucket = buckets.get(key);
+    if (!bucket || now - bucket.startedAt >= windowMs) {
+      buckets.set(key, { startedAt: now, count: 1 });
+      return true;
+    }
+    bucket.count += 1;
+    return bucket.count <= limit;
+  };
+}
 
 export function createApp({ dataPath = defaultDataPath } = {}) {
   const app = express();
   const storage = createStorage(dataPath);
   const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 2 * 1024 * 1024 } });
+  const mentorRateLimit = makeRateLimiter(Math.max(1, Number(process.env.SAULAT_MENTOR_RATE_LIMIT || 30)));
+  app.use((req, res, next) => {
+    if (req.path === '/api/mentor' && Number(req.get('content-length') || 0) > 2048) return res.status(413).json({ error: 'Тело запроса не должно превышать 2 КБ.' });
+    next();
+  });
   app.use(express.json({ limit: '1mb' }));
   app.use(express.urlencoded({ extended: false }));
   app.use(express.static(path.join(root, 'public')));
 
-  app.get('/api/health', (req, res) => res.json({ ok: true, product: 'Сауат', mode: modeLabel(), taskCounts }));
+  app.get('/api/health', (req, res) => res.json({ ok: true, product: 'Сауат', mode: modeLabel(), ai: process.env.OLLAMA_URL ? 'available' : 'fallback', contentVersion: getManifest(contentOptions()).contentVersion, taskCounts }));
+  app.get('/content/manifest.json', (req, res) => {
+    try { return res.json(getManifest(contentOptions())); }
+    catch (error) { return res.status(500).json({ error: 'Манифест контента недоступен', detail: error.message }); }
+  });
+  app.get('/content/:file', (req, res) => {
+    if (!/^[a-zA-Z0-9_-]+\.json$/.test(req.params.file) || req.params.file === 'manifest.json') return res.status(404).json({ error: 'Контент не найден' });
+    try {
+      const story = getStoryForPublic(req.params.file, contentOptions());
+      return story ? res.json(story) : res.status(404).json({ error: 'Контент не найден' });
+    } catch (error) { return res.status(500).json({ error: 'Контент не удалось прочитать', detail: error.message }); }
+  });
   app.post('/api/auth/login', (req, res) => {
     try { return res.json({ user: login(req.body), mode: modeLabel() }); }
     catch (error) { return res.status(400).json({ error: error.message }); }
   });
   app.post('/api/auth/logout', requireAuth(), (req, res) => { clearSessions(); res.json({ ok: true }); });
   app.get('/api/me', requireAuth(), (req, res) => res.json({ user: req.user, mode: modeLabel() }));
+
+  app.post('/api/mentor', (req, res) => {
+    if (!mentorRateLimit(req.ip || req.socket.remoteAddress || 'unknown')) return res.status(429).json({ error: 'Слишком много запросов. Повторите позже.' });
+    if (Buffer.byteLength(JSON.stringify(req.body ?? {}), 'utf8') > 2048) return res.status(413).json({ error: 'Тело запроса не должно превышать 2 КБ.' });
+    const inputError = validateMentorInput(req.body);
+    if (inputError) return res.status(400).json({ error: inputError });
+    const context = getMentorContext(req.body);
+    if (!context) return res.status(404).json({ error: 'История или задание не найдены' });
+    return askStructuredMentor(req.body, context).then((result) => res.json(result)).catch(() => res.json({ strategy: 'locate', hintId: context.hintIds[0] || null, nextTaskId: context.nextTaskIds[0] || null, source: 'rules' }));
+  });
+
+  app.post('/api/events', (req, res) => {
+    const events = extractEvents(req.body);
+    if (!events) return res.status(400).json({ error: 'Ожидается массив events.', accepted: 0, duplicates: 0, rejected: 1 });
+    if (events.length > 500) return res.status(400).json({ error: 'За один запрос можно отправить не более 500 событий.', accepted: 0, duplicates: 0, rejected: events.length });
+    const result = ingestEvents(storage, events);
+    return res.json({ accepted: result.accepted, duplicates: result.duplicates, rejected: result.rejected });
+  });
+
+  app.post('/api/teacher/import', requireAuth('teacher'), upload.single('file'), (req, res) => {
+    let payload = req.body;
+    if (req.file) {
+      try { payload = JSON.parse(req.file.buffer.toString('utf8')); }
+      catch { return res.status(400).json({ error: 'Файл не является корректным JSON.', accepted: 0, duplicates: 0, rejected: 1 }); }
+    }
+    const events = extractEvents(payload);
+    if (!events) return res.status(400).json({ error: 'Файл должен содержать массив events.', accepted: 0, duplicates: 0, rejected: 1 });
+    if (events.length > 500) return res.status(400).json({ error: 'В файле не более 500 событий.', accepted: 0, duplicates: 0, rejected: events.length });
+    const result = ingestEvents(storage, events);
+    return res.json({ accepted: result.accepted, duplicates: result.duplicates, rejected: result.rejected });
+  });
+
+  app.get('/api/teacher/summary', requireAuth('teacher'), (req, res) => res.json(summarizeEvents(storage.read().events || [])));
+  app.get('/api/teacher/export', requireAuth('teacher'), (req, res) => {
+    const events = storage.read().events || [];
+    res.set('Content-Disposition', 'attachment; filename="saulat-events.json"');
+    return res.json({ exportedAt: new Date().toISOString(), events, summary: summarizeEvents(events) });
+  });
 
   app.get('/api/tasks', requireAuth(), (req, res) => {
     const subject = req.query.subject && ['reading', 'math', 'mixed'].includes(req.query.subject) ? req.query.subject : null;
