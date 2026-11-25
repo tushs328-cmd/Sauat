@@ -4,7 +4,7 @@
 
 | Воркстрим | Статус | Evidence |
 |---|---|---|
-| W1 QA ученики | DONE с блокерами | commit `6b7db09`, `qa/run.js`, `QA_NIGHT.md`, 13 сценариев: 12 PASS / 1 FAIL |
+| W1 QA ученики | DONE с блокерами | актуальный `qa/run.js`/`QA_NIGHT.md`, 15 сценариев: 14 PASS / 1 FAIL; tab-return и teacher-import PASS |
 | W2 content drafts | DONE как черновики | `content_drafts/`, `CONTENT_DRAFTS.md`, 5 пакетов / 20 заданий; в `content/` не копировались |
 | W3 фактчек | DONE с ручными follow-up | `FACTS_case_001/002/003.md`; 28/31 сегментов подтверждены, 3 частично/не полностью доступны, противоречий P0/P1 не найдено |
 | W4 KK lint | DONE как статический аудит | `tools/qa/kk_lint.js`, `KK_LINT.md`, 6 мест для проверки человеком |

@@ -136,6 +136,7 @@ function runScenario({ lang, width, height, persona, switchLanguage = false }) {
   const result = { id: `${lang}-${width}-${persona}`, lang, viewport: `${width}x${height}`, persona, switchLanguage, status: 'PASS', evidence: [], errors: [] };
   try {
     fresh(session);
+    code(session, `async page => { await page.evaluate(() => { localStorage.clear(); sessionStorage.clear(); }); await page.reload({ waitUntil: 'domcontentloaded' }); return true; }`);
     selectLanguage(session, lang, width, height);
     result.evidence.push({ stage: 'map', audit: audit(session) });
     result.practice = completePractice(session, persona, switchLanguage);
@@ -193,6 +194,106 @@ function runDiagnostic({ lang, width, height }) {
   return result;
 }
 
+function runTabReturn({ lang, width, height }) {
+  const session = `qa-${runStamp}-tab-return-${lang}-${width}`;
+  const result = { id: `tab-return-${lang}-${width}`, lang, viewport: `${width}x${height}`, status: 'PASS', errors: [] };
+  try {
+    fresh(session);
+    selectLanguage(session, lang, width, height);
+    const check = code(session, `async page => {
+      const storyStart = page.getByRole('button', { name: /Начать маршрут|Бағытты бастау/ }).last();
+      if (await storyStart.count()) await storyStart.click();
+      const tasks = page.getByRole('button', { name: /Перейти к заданиям|Тапсырмаларға өту/ });
+      if (await tasks.count()) await tasks.click();
+      const answers = page.getByRole('group', { name: /Ответ|Жауап/ }).getByRole('button');
+      if (await answers.count()) await answers.first().click();
+      const evidence = page.getByRole('button', { name: /^e/ });
+      if (await evidence.count()) await evidence.first().click();
+      const verify = page.getByRole('button', { name: /^(Проверить|Тексеру)$/ });
+      if (await verify.count()) await verify.click();
+      const next = page.getByRole('button', { name: /Следующий шаг|Келесі қадам/ });
+      if (await next.count()) await next.click();
+      const before = await page.evaluate(() => Object.entries(localStorage));
+      const beforeProgress = await page.evaluate(() => new Promise((resolve) => { const request = indexedDB.open('saulat-client', 2); request.onsuccess = () => { const db = request.result; const get = db.transaction('progress', 'readonly').objectStore('progress').get('state'); get.onsuccess = () => { resolve(get.result?.value || null); db.close(); }; get.onerror = () => { resolve(null); db.close(); }; }; request.onerror = () => resolve(null); }));
+      const reopened = await page.context().newPage();
+      await reopened.goto(${JSON.stringify(baseUrl)});
+      await reopened.waitForTimeout(300);
+      const after = await reopened.evaluate(() => Object.entries(localStorage));
+      const afterProgress = await reopened.evaluate(() => new Promise((resolve) => { const request = indexedDB.open('saulat-client', 2); request.onsuccess = () => { const db = request.result; const get = db.transaction('progress', 'readonly').objectStore('progress').get('state'); get.onsuccess = () => { resolve(get.result?.value || null); db.close(); }; get.onerror = () => { resolve(null); db.close(); }; }; request.onerror = () => resolve(null); }));
+      const body = await reopened.locator('body').innerText();
+      await page.close();
+      return { beforeStorageEntries: before.length, afterStorageEntries: after.length, beforeHistory: beforeProgress?.history?.length || 0, afterHistory: afterProgress?.history?.length || 0, storagePersisted: Boolean(afterProgress?.history?.length), hasApp: body.includes('SAUAT'), body: body.slice(0, 700) };
+    }`);
+    result.check = check;
+    if (!check.storagePersisted || !check.hasApp) result.status = 'FAIL';
+  } catch (error) {
+    result.status = 'FAIL';
+    result.errors.push(String(error));
+  } finally {
+    cli(session, ['close']);
+  }
+  return result;
+}
+
+function runTeacherImport({ lang, width, height }) {
+  const session = `qa-${runStamp}-teacher-import-${lang}-${width}`;
+  const result = { id: `teacher-import-${lang}-${width}`, lang, viewport: `${width}x${height}`, status: 'PASS', errors: [] };
+  try {
+    fresh(session);
+    selectLanguage(session, lang, width, height);
+    result.check = code(session, `async page => {
+      await page.waitForTimeout(300);
+      const diagnostic = page.getByRole('button', { name: /Открыть диагностику|Диагностиканы ашу/ });
+      if (await diagnostic.count()) await diagnostic.click();
+      const begin = page.getByRole('button', { name: /Начать диагностику|Диагностиканы бастау/ });
+      if (await begin.count()) await begin.click();
+      for (let index = 0; index < 4; index += 1) {
+        const answers = page.getByRole('group', { name: /Ответ|Жауап/ }).getByRole('button');
+        if (!(await answers.count())) break;
+        await answers.first().click();
+        const evidence = page.getByRole('button', { name: /^e/ });
+        if (await evidence.count()) await evidence.first().click();
+        const verify = page.getByRole('button', { name: /^(Проверить|Тексеру)$/ });
+        if (!(await verify.count())) break;
+        await verify.click();
+        await page.waitForTimeout(150);
+        const next = page.getByRole('button', { name: /Следующий шаг|Келесі қадам/ });
+        if (!(await next.count())) break;
+        await next.click();
+        await page.waitForTimeout(150);
+      }
+      const finish = page.getByRole('button', { name: /Завершить диагностику|Диагностиканы аяқтау/ });
+      if (await finish.count()) await finish.click();
+      const map = page.getByRole('button', { name: /Вернуться на карту|Картаға қайту/ });
+      if (await map.count()) await map.click();
+      await page.waitForTimeout(300);
+      const exportButton = page.getByRole('button', { name: /Экспорт результатов|Нәтижелерді экспорттау/ });
+      let download = null;
+      if (await exportButton.count()) {
+        const waiter = page.waitForEvent('download', { timeout: 5000 }).catch(() => null);
+        await exportButton.click();
+        download = await waiter;
+      }
+      const cabinet = page.getByRole('button', { name: /Кабинет учителя/ });
+      if (await cabinet.count()) await cabinet.click();
+      await page.waitForTimeout(300);
+      const fileInput = page.locator('input[type=file]');
+      const filePath = download ? await download.path() : null;
+      if (filePath && await fileInput.count()) await fileInput.setInputFiles(filePath);
+      await page.waitForTimeout(400);
+      const body = await page.locator('body').innerText();
+      return { downloadFilename: download?.suggestedFilename() || null, importAccepted: /принято 3|қабылданды 3/i.test(body), metric: body.match(/(?:ГЛАВНАЯ МЕТРИКА|НЕГІЗГІ МЕТРИКА)[\\s\\S]{0,80}/i)?.[0] || null, events: body.match(/3 событий|3 оқиға/i)?.[0] || null, hasCabinet: /КАБИНЕТ УЧИТЕЛЯ|МҰҒАЛІМ КАБИНЕТІ/i.test(body), body: body.slice(0, 1200) };
+    }`);
+    if (!result.check.importAccepted || !result.check.hasCabinet || !result.check.downloadFilename) result.status = 'FAIL';
+  } catch (error) {
+    result.status = 'FAIL';
+    result.errors.push(String(error));
+  } finally {
+    cli(session, ['close']);
+  }
+  return result;
+}
+
 function runOffline({ lang, width, height }) {
   const session = `qa-${runStamp}-offline-${lang}-${width}`;
   const result = { id: `offline-${lang}-${width}`, lang, viewport: `${width}x${height}`, status: 'PASS', errors: [] };
@@ -230,22 +331,26 @@ const results = {
   scenarios: []
 };
 const maxScenarios = Number(process.env.QA_MAX_SCENARIOS || 0);
-const addScenario = (factory) => {
+const onlyScenario = process.env.QA_ONLY_SCENARIO || '';
+const addScenario = (id, factory) => {
+  if (onlyScenario && onlyScenario !== id) return;
   if (!maxScenarios || results.scenarios.length < maxScenarios) results.scenarios.push(factory());
 };
 
 for (const lang of ['ru', 'kk']) {
   for (const [width, height] of [[360, 800], [768, 1024], [1440, 900]]) {
-    addScenario(() => runScenario({ lang, width, height, persona: 'first' }));
+    addScenario(`${lang}-${width}-first`, () => runScenario({ lang, width, height, persona: 'first' }));
   }
 }
-addScenario(() => runScenario({ lang: 'ru', width: 360, height: 800, persona: 'random' }));
-addScenario(() => runScenario({ lang: 'ru', width: 360, height: 800, persona: 'hint-eater' }));
-addScenario(() => runScenario({ lang: 'ru', width: 360, height: 800, persona: 'double-click' }));
-addScenario(() => runScenario({ lang: 'ru', width: 360, height: 800, persona: 'first', switchLanguage: true }));
-addScenario(() => runDiagnostic({ lang: 'ru', width: 360, height: 800 }));
-addScenario(() => runDiagnostic({ lang: 'kk', width: 768, height: 1024 }));
-addScenario(() => runOffline({ lang: 'ru', width: 360, height: 800 }));
+addScenario('ru-360-random', () => runScenario({ lang: 'ru', width: 360, height: 800, persona: 'random' }));
+addScenario('ru-360-hint-eater', () => runScenario({ lang: 'ru', width: 360, height: 800, persona: 'hint-eater' }));
+addScenario('ru-360-double-click', () => runScenario({ lang: 'ru', width: 360, height: 800, persona: 'double-click' }));
+addScenario('ru-360-first-switch', () => runScenario({ lang: 'ru', width: 360, height: 800, persona: 'first', switchLanguage: true }));
+addScenario('diagnostic-ru-360', () => runDiagnostic({ lang: 'ru', width: 360, height: 800 }));
+addScenario('diagnostic-kk-768', () => runDiagnostic({ lang: 'kk', width: 768, height: 1024 }));
+addScenario('tab-return-ru-360', () => runTabReturn({ lang: 'ru', width: 360, height: 800 }));
+addScenario('teacher-import-ru-360', () => runTeacherImport({ lang: 'ru', width: 360, height: 800 }));
+addScenario('offline-ru-360', () => runOffline({ lang: 'ru', width: 360, height: 800 }));
 
 const failed = results.scenarios.filter((scenario) => scenario.status !== 'PASS');
 results.summary = { scenarios: results.scenarios.length, failed: failed.length, passed: results.scenarios.length - failed.length, failedIds: failed.map((scenario) => scenario.id) };
