@@ -1,6 +1,6 @@
 const CACHE = 'saulat-shell-v1';
 const SHELL = [
-  '/', '/index.html', '/sauat.css', '/manifest.webmanifest', '/dev/fixture.json',
+  '/', '/index.html', '/sauat.css', '/manifest.webmanifest', '/sw.js', '/dev/fixture.json',
   '/js/main.js', '/js/content.js', '/js/engine.js', '/js/storage.js', '/js/offline.js',
   '/js/i18n/index.js', '/js/i18n/ru.js', '/js/i18n/kk.js'
 ];
@@ -40,5 +40,5 @@ self.addEventListener('fetch', (event) => {
     const copy = response.clone();
     caches.open(CACHE).then((cache) => cache.put(event.request, copy));
     return response;
-  }).catch(() => event.request.mode === 'navigate' ? caches.match('/') : Response.error())));
+  }).catch(() => event.request.mode === 'navigate' ? caches.match('/', { ignoreSearch: true }).then((fallback) => fallback || caches.match('/index.html')) : Response.error())));
 });

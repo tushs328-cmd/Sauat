@@ -79,7 +79,7 @@ export function taskProgress(progress, storyId, taskId) {
   return progress.tasks[`${storyId}:${taskId}`] || { attempts: 0, hintsUsed: 0, firstTry: null, xpAwarded: false, xpEarned: 0, solved: false };
 }
 
-export async function recordAttempt(progress, story, task, result) {
+export async function recordAttempt(progress, story, task, result, { persist = true } = {}) {
   const key = `${story.id}:${task.id}`;
   const previous = taskProgress(progress, story.id, task.id);
   const isFirstAttempt = previous.attempts === 0;
@@ -91,16 +91,16 @@ export async function recordAttempt(progress, story, task, result) {
   progress.history.push({ storyId: story.id, taskId: task.id, ...result, hintsUsed: entry.hintsUsed, firstTry: isFirstAttempt, ts: new Date().toISOString() });
   const solved = story.tasks.every((item) => taskProgress(progress, story.id, item.id).solved);
   if (solved && !progress.completedStories.includes(story.id)) progress.completedStories.push(story.id);
-  await saveProgress(progress);
+  if (persist) await saveProgress(progress);
   return { ...entry, isFirstAttempt };
 }
 
-export async function recordHint(progress, storyId, taskId) {
+export async function recordHint(progress, storyId, taskId, { persist = true } = {}) {
   const key = `${storyId}:${taskId}`;
   const entry = taskProgress(progress, storyId, taskId);
   const next = { ...entry, hintsUsed: Math.min(entry.hintsUsed + 1, 3) };
   progress.tasks[key] = next;
-  await saveProgress(progress);
+  if (persist) await saveProgress(progress);
   return next;
 }
 
@@ -137,7 +137,7 @@ function validEvent(event) {
   return event && typeof event === 'object' && typeof event.eventId === 'string' && event.eventId.length > 0
     && typeof event.anonId === 'string' && typeof event.ts === 'string' && Number.isInteger(event.contentVersion)
     && typeof event.storyId === 'string' && typeof event.taskId === 'string'
-    && ['find', 'infer', 'evidence'].includes(event.skill) && ['practice', 'diagnostic'].includes(event.mode)
+    && ['find', 'infer', 'evidence'].includes(event.skill) && ['practice', 'diagnostic', 'jury'].includes(event.mode)
     && Number.isInteger(event.attempt) && event.attempt > 0 && typeof event.answerCorrect === 'boolean'
     && typeof event.evidenceCorrect === 'boolean' && Number.isInteger(event.hintsUsed) && event.hintsUsed >= 0
     && typeof event.firstTry === 'boolean' && ['kk', 'ru'].includes(event.lang)

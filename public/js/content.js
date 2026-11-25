@@ -12,7 +12,7 @@ export function manifestUrls(manifest) {
     ...(entry.assets || []).map((asset) => `/${String(asset).replace(/^\/+/, '')}`)
   ]);
   return [...new Set([
-    '/', '/index.html', '/sauat.css', '/manifest.webmanifest', '/content/manifest.json',
+    '/', '/index.html', '/sauat.css', '/manifest.webmanifest', '/sw.js', '/content/manifest.json',
     '/js/main.js', '/js/content.js', '/js/engine.js', '/js/storage.js', '/js/offline.js',
     '/js/i18n/index.js', '/js/i18n/ru.js', '/js/i18n/kk.js', '/dev/fixture.json', ...stories
   ])];
