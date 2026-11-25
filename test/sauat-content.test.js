@@ -50,7 +50,33 @@ test('валидатор требует claim у claim_check', () => {
   assert.match(result.errors.map((error) => error.message).join(' '), /claim_check/);
 });
 
+test('отсутствующий image.file предупреждает draft и блокирует approved', () => {
+  const draft = copyFixture();
+  draft.reviewStatus = { kk: 'draft', ru: 'draft' };
+  draft.image = { file: 'assets/definitely-missing.svg', alt: draft.title, credit: 'test', license: 'MIT', isReconstruction: true };
+  const draftResult = validateStory(draft);
+  assert.equal(draftResult.valid, true);
+  assert.equal(draftResult.warnings.length, 1);
+  assert.match(draftResult.warnings[0].message, /не найден/);
+
+  const approved = copyFixture();
+  approved.reviewStatus = { kk: 'approved', ru: 'approved' };
+  approved.image = draft.image;
+  const approvedResult = validateStory(approved);
+  assert.equal(approvedResult.valid, false);
+  assert.ok(approvedResult.errors.some((error) => error.keyword === 'asset-exists'));
+});
+
 test('манифест скрывает fixture по умолчанию и включает его только явным флагом', () => {
   assert.deepEqual(createManifest({ includeFixture: false }).stories, []);
   assert.deepEqual(createManifest({ includeFixture: true }).stories.map((story) => story.file), ['fixture_test.json']);
+  assert.deepEqual(createManifest({ includeDraft: true, includeFixture: false }).stories.map((story) => story.file), ['case_001.json']);
+  const previousNodeEnv = process.env.NODE_ENV;
+  process.env.NODE_ENV = 'production';
+  try {
+    assert.deepEqual(createManifest({ includeDraft: true, includeFixture: true }).stories, []);
+  } finally {
+    if (previousNodeEnv === undefined) delete process.env.NODE_ENV;
+    else process.env.NODE_ENV = previousNodeEnv;
+  }
 });

@@ -18,7 +18,12 @@ const defaultDataPath = process.env.SAULAT_DATA_FILE || path.join(root, 'data', 
 function today() { return new Date().toISOString().slice(0, 10); }
 function safeString(value, max = 10000) { return String(value ?? '').trim().slice(0, max); }
 function modeLabel() { return process.env.OLLAMA_URL ? 'ИИ (локальная Ollama, если доступна)' : 'Без ИИ (офлайн-банк)'; }
-function contentOptions() { return { includeFixture: process.env.SAULAT_INCLUDE_FIXTURE === '1' && process.env.NODE_ENV !== 'production' }; }
+function contentOptions() {
+  return {
+    includeFixture: process.env.SAULAT_INCLUDE_FIXTURE === '1' && process.env.NODE_ENV !== 'production',
+    includeDraft: process.env.INCLUDE_DRAFT === '1' && process.env.NODE_ENV !== 'production'
+  };
+}
 
 function validateMentorInput(body) {
   const keys = ['storyId', 'taskId', 'skill', 'errorProfile', 'lang'];
@@ -60,7 +65,7 @@ export function createApp({ dataPath = defaultDataPath } = {}) {
   app.use(express.urlencoded({ extended: false }));
   app.use(express.static(path.join(root, 'public')));
 
-  app.get('/api/health', (req, res) => res.json({ ok: true, product: 'Сауат', mode: modeLabel(), ai: process.env.OLLAMA_URL ? 'available' : 'fallback', contentVersion: getManifest(contentOptions()).contentVersion, taskCounts }));
+  app.get('/api/health', (req, res) => res.json({ ok: true, product: 'Сауат', mode: modeLabel(), ai: process.env.OLLAMA_URL ? 'available' : 'fallback', includeDraft: contentOptions().includeDraft, contentVersion: getManifest(contentOptions()).contentVersion, taskCounts }));
   app.get('/content/manifest.json', (req, res) => {
     try { return res.json(getManifest(contentOptions())); }
     catch (error) { return res.status(500).json({ error: 'Манифест контента недоступен', detail: error.message }); }

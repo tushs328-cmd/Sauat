@@ -12,15 +12,25 @@ function includeFixtureByDefault() {
   return process.env.SAULAT_INCLUDE_FIXTURE === '1' && process.env.NODE_ENV !== 'production';
 }
 
-export function createManifest({ includeFixture = includeFixtureByDefault() } = {}) {
+function includeDraftByDefault() {
+  return process.env.INCLUDE_DRAFT === '1' && process.env.NODE_ENV !== 'production';
+}
+
+export function createManifest({ includeFixture = includeFixtureByDefault(), includeDraft = includeDraftByDefault() } = {}) {
   const result = validateContentDirectory(contentDir);
   if (!result.valid) {
     const error = new Error('Нельзя собрать манифест: контент не прошёл validate.');
     error.diagnostics = result.errors;
     throw error;
   }
+  const dev = process.env.NODE_ENV !== 'production';
   const stories = result.stories
-    .filter((story) => !story.isTestFixture && story.reviewStatus.kk === 'approved' && story.reviewStatus.ru === 'approved' || (includeFixture && story.isTestFixture))
+    .filter((story) => {
+      if (story.isTestFixture) return includeFixture && dev;
+      const approved = story.reviewStatus.kk === 'approved' && story.reviewStatus.ru === 'approved';
+      const draft = story.reviewStatus.kk === 'draft' || story.reviewStatus.ru === 'draft';
+      return approved || (includeDraft && dev && draft);
+    })
     .map((story) => ({
       id: story.id,
       kind: story.kind,
@@ -52,6 +62,6 @@ export function getStoryForPublic(fileName, options = {}) {
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url))) {
-  const manifest = writeManifest({ includeFixture: process.argv.includes('--include-fixture') });
+  const manifest = writeManifest({ includeFixture: process.argv.includes('--include-fixture'), includeDraft: process.env.INCLUDE_DRAFT === '1' && process.env.NODE_ENV !== 'production' });
   console.log(`Манифест создан: ${manifest.stories.length} историй.`);
 }

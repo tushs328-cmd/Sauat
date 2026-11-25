@@ -50,12 +50,37 @@ after(() => {
 });
 
 test('content API отдаёт манифест и fixture только в dev-флаге', async () => {
+  const health = await request('/api/health');
+  assert.equal(health.body.includeDraft, false);
   const manifest = await request('/content/manifest.json');
   assert.equal(manifest.response.status, 200);
   assert.deepEqual(manifest.body.stories.map((story) => story.id), ['fixture_test']);
   const story = await request('/content/fixture_test.json');
   assert.equal(story.response.status, 200);
   assert.equal(story.body.isTestFixture, true);
+});
+
+test('INCLUDE_DRAFT включает case_001 только в dev и mentor принимает t1–t4 allowlist hints', async () => {
+  process.env.INCLUDE_DRAFT = '1';
+  delete process.env.OLLAMA_URL;
+  const health = await request('/api/health');
+  assert.equal(health.body.includeDraft, true);
+  const manifest = await request('/content/manifest.json');
+  assert.deepEqual(manifest.body.stories.map((story) => story.id).sort(), ['case_001', 'fixture_test'].sort());
+
+  const caseStory = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'content', 'case_001.json'), 'utf8'));
+  for (const task of caseStory.tasks) {
+    const result = await request('/api/mentor', {
+      method: 'POST',
+      body: JSON.stringify({ storyId: 'case_001', taskId: task.id, skill: task.skill, errorProfile: { answerWrong: true, evidenceWrong: false, attempt: 1, hintsUsed: 0, lastHintLevel: 0 }, lang: 'ru' })
+    });
+    assert.equal(result.response.status, 200, task.id);
+    assert.equal(result.body.source, 'rules');
+    assert.ok(task.hints.some((hint) => hint.id === result.body.hintId), `${task.id}: hintId вне allowlist`);
+  }
+  process.env.INCLUDE_DRAFT = '0';
+  const hidden = await request('/content/case_001.json');
+  assert.equal(hidden.response.status, 404);
 });
 
 test('mentor без Ollama честно использует rules fallback', async () => {

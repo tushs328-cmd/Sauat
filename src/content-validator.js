@@ -106,8 +106,27 @@ function crossValidateStory(story) {
   return errors;
 }
 
+function imageIssue(story) {
+  if (!story?.image?.file || typeof story.image.file !== 'string') return null;
+  const publicDir = path.resolve(projectRoot, 'public');
+  const resolved = path.resolve(publicDir, story.image.file);
+  const relative = path.relative(publicDir, resolved);
+  const isOutsidePublic = relative.startsWith('..') || path.isAbsolute(relative);
+  const missing = isOutsidePublic || !fs.existsSync(resolved);
+  if (!missing) return null;
+  const approved = story.reviewStatus?.kk === 'approved' && story.reviewStatus?.ru === 'approved';
+  return {
+    severity: approved ? 'error' : 'warning',
+    instancePath: '/image/file',
+    message: `файл изображения «${story.image.file}» ${isOutsidePublic ? 'выходит за пределы public/' : 'не найден в public/'}`,
+    suggestion: approved ? 'Добавьте ассет в public/ до approved-публикации.' : 'Добавьте ассет перед переводом истории в approved.',
+    keyword: 'asset-exists'
+  };
+}
+
 export function validateStory(story, { source = 'story' } = {}) {
   const errors = [];
+  const warnings = [];
   if (!validateSchema(story)) {
     for (const error of validateSchema.errors || []) {
       errors.push(diagnostic(error.instancePath || error.schemaPath, error.message || 'не соответствует схеме', 'Сверьте структуру с docs/sauat/schema.json.', error.keyword));
@@ -116,7 +135,10 @@ export function validateStory(story, { source = 'story' } = {}) {
   if (story && typeof story === 'object' && Array.isArray(story.documents) && Array.isArray(story.sources) && Array.isArray(story.tasks)) {
     errors.push(...crossValidateStory(story));
   }
-  return { valid: errors.length === 0, source, errors };
+  const imageDiagnostic = imageIssue(story);
+  if (imageDiagnostic?.severity === 'error') errors.push(imageDiagnostic);
+  if (imageDiagnostic?.severity === 'warning') warnings.push(imageDiagnostic);
+  return { valid: errors.length === 0, source, errors, warnings };
 }
 
 export function listContentFiles(contentDir = defaultContentDir) {
@@ -129,6 +151,7 @@ export function listContentFiles(contentDir = defaultContentDir) {
 
 export function validateContentDirectory(contentDir = defaultContentDir) {
   const errors = [];
+  const warnings = [];
   const stories = [];
   const storyIds = new Map();
   for (const filePath of listContentFiles(contentDir)) {
@@ -141,6 +164,7 @@ export function validateContentDirectory(contentDir = defaultContentDir) {
     }
     const result = validateStory(story, { source: filePath });
     errors.push(...result.errors);
+    warnings.push(...result.warnings);
     if (result.valid) {
       if (storyIds.has(story.id)) {
         errors.push(diagnostic(filePath, `дублируется ID истории «${story.id}»`, `ID уже используется в ${storyIds.get(story.id)}.`));
@@ -150,12 +174,15 @@ export function validateContentDirectory(contentDir = defaultContentDir) {
       stories.push({ ...story, file: path.basename(filePath) });
     }
   }
-  return { valid: errors.length === 0, errors, stories };
+  return { valid: errors.length === 0, errors, warnings, stories };
 }
 
 export function formatDiagnostics(result) {
-  if (result.valid) return 'Контент валиден.';
-  return result.errors.map((error) => `${error.source || ''}${displayPath(error.instancePath)}: ${error.message}. Подсказка: ${error.suggestion}`).join('\n');
+  const lines = [];
+  if (result.valid) lines.push('Контент валиден.');
+  for (const warning of result.warnings || []) lines.push(`WARNING ${warning.source || ''}${displayPath(warning.instancePath)}: ${warning.message}. Подсказка: ${warning.suggestion}`);
+  for (const error of result.errors || []) lines.push(`ERROR ${error.source || ''}${displayPath(error.instancePath)}: ${error.message}. Подсказка: ${error.suggestion}`);
+  return lines.join('\n');
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url))) {
