@@ -16,7 +16,7 @@ const root = path.resolve(here, '..');
 const defaultDataPath = process.env.SAULAT_DATA_FILE || path.join(root, 'data', 'saulat.json');
 
 function today() { return new Date().toISOString().slice(0, 10); }
-function safeString(value, max = 10000) { return String(value ?? '').trim().slice(0, max); }
+function safeString(value, max = 10000) { return String(value ?? '').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '').trim().slice(0, max); }
 function modeLabel() { return process.env.OLLAMA_URL ? 'ИИ (локальная Ollama, если доступна)' : 'Без ИИ (офлайн-банк)'; }
 function contentOptions() {
   return {
@@ -52,17 +52,36 @@ function makeRateLimiter(limit = 30, windowMs = 60_000) {
   };
 }
 
-export function createApp({ dataPath = defaultDataPath, mentorContextResolver = getMentorContext, aiState = createAiState() } = {}) {
+function securityHeaders(req, res, next) {
+  res.set('X-Content-Type-Options', 'nosniff');
+  res.set('X-Frame-Options', 'DENY');
+  res.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  res.set('Content-Security-Policy', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'");
+  next();
+}
+
+export function createApp({ dataPath = defaultDataPath, mentorContextResolver = getMentorContext, aiState = createAiState(), apiRateLimit = Number(process.env.SAULAT_API_RATE_LIMIT || 300) } = {}) {
   const app = express();
+  app.disable('x-powered-by');
   const storage = createStorage(dataPath);
   const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 2 * 1024 * 1024 } });
   const mentorRateLimit = makeRateLimiter(Math.max(1, Number(process.env.SAULAT_MENTOR_RATE_LIMIT || 30)));
+  const apiLimiter = makeRateLimiter(Math.max(1, apiRateLimit));
+  app.use(securityHeaders);
   app.use((req, res, next) => {
+    if (req.path.startsWith('/api/')) {
+      const key = req.ip || req.socket.remoteAddress || 'unknown';
+      if (!apiLimiter(key)) {
+        res.set('Retry-After', '60');
+        return res.status(429).json({ error: 'Слишком много запросов к API. Повторите позже.' });
+      }
+    }
     if (req.path === '/api/mentor' && Number(req.get('content-length') || 0) > 2048) return res.status(413).json({ error: 'Тело запроса не должно превышать 2 КБ.' });
     next();
   });
-  app.use(express.json({ limit: '1mb' }));
-  app.use(express.urlencoded({ extended: false }));
+  app.use(express.json({ limit: '256kb', strict: true }));
+  app.use(express.urlencoded({ extended: false, limit: '32kb' }));
   app.use(express.static(path.join(root, 'public')));
 
   app.get('/api/health', (req, res) => res.json({ ok: true, product: 'Сауат', mode: modeLabel(), ai: aiStatus(aiState), includeDraft: contentOptions().includeDraft, contentVersion: getManifest(contentOptions()).contentVersion, taskCounts }));
@@ -266,6 +285,11 @@ export function createApp({ dataPath = defaultDataPath, mentorContextResolver = 
   });
 
   app.get('*', (req, res) => res.sendFile(path.join(root, 'public', 'index.html')));
+  app.use((error, req, res, next) => {
+    if (error?.type === 'entity.too.large') return res.status(413).json({ error: 'Тело запроса слишком большое.' });
+    if (error instanceof SyntaxError && error.status === 400) return res.status(400).json({ error: 'Некорректный JSON.' });
+    return next(error);
+  });
   return app;
 }
 
