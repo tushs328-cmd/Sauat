@@ -9,8 +9,8 @@
 | W3 фактчек | DONE с ручными follow-up | `FACTS_case_001/002/003.md`; 28/31 сегментов подтверждены, 3 частично/не полностью доступны, противоречий P0/P1 не найдено |
 | W4 KK lint | DONE как статический аудит | `tools/qa/kk_lint.js`, `KK_LINT.md`, 6 мест для проверки человеком |
 | W5 a11y/perf | ЧАСТИЧНО | W1 дал viewport/focus/overflow/image audit; axe/Lighthouse/TBT ещё не запускались |
-| W6 demo video | НЕ НАЧАТ | Скрипт и видео не создавались |
-| W7 submission kit | ЧЕРНОВИК ГОТОВ | `SUBMISSION_KIT.md`; отправка не выполнялась |
+| W6 demo video | DONE | commit `e574d33`, `tools/demo/run.js`, `docs/demo/sauat-demo.webm` 183.2 с, `demo-run.json` без ошибки |
+| W7 submission kit | DONE как draft | `SUBMISSION_KIT.md`; текст формы, 10 слайдов и 10 честных Q&A готовы, отправка не выполнялась |
 
 ## Топ дефектов
 
