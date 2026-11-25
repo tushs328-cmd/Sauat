@@ -1,6 +1,6 @@
 const CACHE = 'saulat-shell-v1';
 const SHELL = [
-  '/', '/index.html', '/sauat.css', '/manifest.webmanifest', '/sw.js', '/dev/fixture.json',
+  '/', '/index.html', '/sauat.css', '/manifest.webmanifest', '/sw.js', '/dev/fixture.json', '/icons/icon-192.svg', '/icons/icon-512.svg',
   '/js/main.js', '/js/content.js', '/js/engine.js', '/js/storage.js', '/js/offline.js',
   '/js/i18n/index.js', '/js/i18n/ru.js', '/js/i18n/kk.js'
 ];
