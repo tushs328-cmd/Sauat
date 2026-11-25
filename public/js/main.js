@@ -6,10 +6,11 @@ import { exportEvents, finishOnboarding, flushEvents, getAnonId, hasOnboarded, i
 
 const params = new URLSearchParams(location.search);
 const devMode = params.get('dev') === '1';
+const demoMode = globalThis.__SAULAT_STATIC__ === true;
 const state = {
   lang: loadLanguage(), view: hasOnboarded() ? 'map' : 'onboarding', stories: [], story: null, manifest: null,
   taskIndex: 0, selectedOptions: [], selectedEvidence: [], feedback: null, hint: null, mentorState: 'none', mentorSource: 'none',
-  progress: { schemaVersion: 1, xp: 0, tasks: {}, completedStories: [], history: [] }, juryProgress: null, teacherEvents: [], importMessage: '', errorMessage: '', offlineReady: false, offlineState: 'checking', juryMode: params.get('jury') === '1'
+  progress: { schemaVersion: 1, xp: 0, tasks: {}, completedStories: [], history: [] }, juryProgress: null, teacherEvents: [], importMessage: '', errorMessage: '', offlineReady: false, offlineState: 'checking', juryMode: params.get('jury') === '1', demoMode
 };
 const app = document.querySelector('#app');
 const t = (key) => dictionary(state.lang)[key] || dictionary('ru')[key] || key;
@@ -25,7 +26,7 @@ const practiceComplete = () => practiceStories().length > 0 && practiceStories()
 function header({ back = false } = {}) {
   const offlineLabel = state.offlineReady ? t('offlineReady') : state.offlineState === 'error' ? t('offlineNotReady') : t('offlineChecking');
   const hideXp = state.view === 'results' || state.story?.kind === 'diagnostic';
-  return `<header class="topbar"><button class="brand" data-action="map" type="button" aria-label="SAUAT"><span class="brand-mark">S</span><span><strong>SAUAT</strong><small>${esc(t('slogan'))}</small></span></button><div class="top-actions">${back ? `<button class="icon-button" data-action="map" type="button">← <span>${esc(t('back'))}</span></button>` : ''}${state.juryMode ? `<span class="jury-badge">${esc(t('juryMode'))}</span>` : ''}<span class="offline-status ${state.offlineReady ? 'ready' : ''}" aria-live="polite"><span class="status-dot"></span>${esc(offlineLabel)}</span>${hideXp ? '' : `<span class="xp-pill"><span class="xp-star">XP</span> ${state.progress.xp}</span>`}<button class="language-toggle" data-action="toggle-lang" type="button">${esc(dictionary(state.lang).other)}</button></div></header>`;
+  return `<header class="topbar"><button class="brand" data-action="map" type="button" aria-label="SAUAT"><span class="brand-mark">S</span><span><strong>SAUAT</strong><small>${esc(t('slogan'))}</small></span></button><div class="top-actions">${back ? `<button class="icon-button" data-action="map" type="button">← <span>${esc(t('back'))}</span></button>` : ''}${state.demoMode ? `<span class="demo-badge">${esc(t('demoMode'))}</span>` : ''}${state.juryMode ? `<span class="jury-badge">${esc(t('juryMode'))}</span>` : ''}<span class="offline-status ${state.offlineReady ? 'ready' : ''}" aria-live="polite"><span class="status-dot"></span>${esc(offlineLabel)}</span>${hideXp ? '' : `<span class="xp-pill"><span class="xp-star">XP</span> ${state.progress.xp}</span>`}<button class="language-toggle" data-action="toggle-lang" type="button">${esc(dictionary(state.lang).other)}</button></div></header>`;
 }
 
 function storyBadge(story) { return story?.isTestFixture ? `<span class="tag sand">${esc(t('testBadge'))}</span>` : ''; }
@@ -51,7 +52,7 @@ function taskTotals(story) {
 }
 function storyUnlocked(story) {
   if (!story) return false;
-  if (devMode || state.juryMode) return true;
+  if (demoMode || devMode || state.juryMode) return true;
   if (story.kind === 'practice') {
     const list = practiceStories();
     const index = list.findIndex((item) => item.id === story.id);
@@ -92,7 +93,7 @@ function aboutScreen() {
   return `<div class="app-shell">${header({ back: true })}<main class="page info-page" id="main"><div class="eyebrow">${esc(t('aboutEyebrow'))}</div><h1>${esc(t('aboutTitle'))}</h1><p class="lead">${esc(t('aboutIntro'))}</p><div class="info-grid"><section class="info-card"><h2>${esc(t('aboutProblemTitle'))}</h2><p>${esc(t('aboutProblem'))}</p></section><section class="info-card"><h2>${esc(t('aboutHowTitle'))}</h2><p class="flow-line">${esc(t('aboutHowFlow'))}</p><p>${esc(t('aboutHowText'))}</p></section><section class="info-card"><h2>${esc(t('aboutLimitsTitle'))}</h2><p>${esc(t('aboutLimits'))}</p></section></div><button class="primary-button wide" data-action="map" type="button">${esc(t('openMap'))}</button></main></div>`;
 }
 function projectScreen() {
-  return `<div class="app-shell">${header({ back: true })}<main class="page info-page" id="main"><div class="eyebrow">${esc(t('projectEyebrow'))}</div><h1>${esc(t('projectTitle'))}</h1><p class="lead">${esc(t('projectIntro'))}</p><section class="info-card"><h2>${esc(t('projectToolsTitle'))}</h2><p>${esc(t('projectTools'))}</p></section><section class="info-card"><h2>${esc(t('projectTrustTitle'))}</h2><p>${esc(t('projectTrust'))}</p></section><button class="primary-button wide" data-action="map" type="button">${esc(t('openMap'))}</button></main></div>`;
+  return `<div class="app-shell">${header({ back: true })}<main class="page info-page" id="main"><div class="eyebrow">${esc(t('projectEyebrow'))}</div><h1>${esc(t('projectTitle'))}</h1><p class="lead">${esc(t('projectIntro'))}</p><section class="info-card ai-disclosure-card"><h2>${esc(t('projectToolsTitle'))}</h2><p class="ai-disclosure">${esc(t('aiDisclosure'))}</p><p>${esc(t('projectTools'))}</p></section><section class="info-card"><h2>${esc(t('projectTrustTitle'))}</h2><p>${esc(t('projectTrust'))}</p></section><button class="primary-button wide" data-action="map" type="button">${esc(t('openMap'))}</button></main></div>`;
 }
 function errorScreen() {
   return `<main class="page error-page" id="main" aria-live="assertive"><div class="eyebrow">SAUAT</div><h1>${esc(t('contentErrorTitle'))}</h1><p class="lead">${esc(state.errorMessage || t('contentErrorText'))}</p><p class="error-detail">${esc(navigator.onLine ? t('contentErrorHint') : t('offlineErrorHint'))}</p><button class="primary-button" data-action="retry" type="button">${esc(t('retry'))}</button></main>`;
@@ -113,7 +114,7 @@ function storyIntro() {
 function evidenceGroups(story, selected) {
   return story.documents.map((doc) => `<section class="evidence-group"><h3>${esc(text(doc.title) || doc.id.toUpperCase())}</h3><div class="evidence-grid">${doc.segments.map((segment) => `<button class="evidence-choice ${selected.includes(segment.id) ? 'selected' : ''}" data-evidence="${esc(segment.id)}" type="button" aria-pressed="${selected.includes(segment.id)}"><span class="segment-id">${esc(segment.id)}</span><span>${esc(text(segment.text))}</span></button>`).join('')}</div></section>`).join('');
 }
-function mentorBadge() { const label = state.mentorState === 'ai' ? t('mentorAi') : state.mentorState === 'offline' ? t('mentorOffline') : t('mentorRules'); return `<span class="mentor-state ${state.mentorState}"><span class="status-dot"></span>${esc(label)}</span>`; }
+function mentorBadge() { const label = state.mentorState === 'ai' ? t('mentorAi') : state.mentorState === 'offline' ? t('mentorOffline') : t('mentorRules'); return `<div class="ai-disclosure" role="note">${esc(t('aiDisclosure'))}</div><span class="mentor-state ${state.mentorState}"><span class="status-dot"></span>${esc(label)}</span>`; }
 function taskScreen() {
   const task = state.story.tasks[state.taskIndex]; const diagnostic = state.story.kind === 'diagnostic'; const progress = taskProgress(state.progress, state.story.id, task.id);
   const feedback = state.feedback ? `<div class="feedback ${state.feedback.complete ? 'success' : state.feedback.answerCorrect ? 'partial' : 'error'}" role="status"><strong>${esc(state.feedback.complete ? t('correct') : state.feedback.answerCorrect ? t('partial') : t('wrong'))}</strong><div class="feedback-grid"><span>${esc(t('answerCorrect'))}: ${state.feedback.answerCorrect ? '✓' : '×'}</span><span>${esc(t('evidenceCorrect'))}: ${state.feedback.evidenceCorrect ? '✓' : task.requireEvidence ? '×' : '—'}</span></div>${state.feedback.firstAttempt ? `<small>${esc(t('firstSaved'))}</small>` : ''}</div>` : '';

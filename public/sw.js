@@ -1,4 +1,4 @@
-const CACHE = 'saulat-shell-v1';
+const CACHE = 'saulat-shell-v1-offline-v4';
 const SHELL = [
   '/', '/index.html', '/sauat.css', '/manifest.webmanifest', '/sw.js', '/dev/fixture.json', '/icons/icon-192.svg', '/icons/icon-512.svg',
   '/js/main.js', '/js/content.js', '/js/engine.js', '/js/storage.js', '/js/offline.js',
@@ -33,12 +33,29 @@ self.addEventListener('activate', (event) => event.waitUntil((async () => {
 })()));
 
 self.addEventListener('fetch', (event) => {
-  if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
-  if (url.origin !== self.location.origin || url.pathname.startsWith('/api/')) return;
-  event.respondWith(caches.match(event.request).then((cached) => cached || fetch(event.request).then((response) => {
-    const copy = response.clone();
-    caches.open(CACHE).then((cache) => cache.put(event.request, copy));
-    return response;
-  }).catch(() => event.request.mode === 'navigate' ? caches.match('/', { ignoreSearch: true }).then((fallback) => fallback || caches.match('/index.html')) : Response.error())));
+  if (url.origin !== self.location.origin) return;
+  if (url.pathname === '/api/events' && event.request.method === 'POST') {
+    event.respondWith(fetch(event.request).catch(() => new Response(JSON.stringify({ error: 'offline' }), {
+      status: 200,
+      headers: { 'content-type': 'application/json', 'x-saulat-offline': '1' }
+    })));
+    return;
+  }
+  if (event.request.method !== 'GET' || url.pathname.startsWith('/api/')) return;
+  event.respondWith((async () => {
+    const cached = await caches.match(event.request, { ignoreSearch: event.request.mode === 'navigate' });
+    if (cached) return cached;
+    try {
+      const response = await fetch(event.request);
+      if (response.ok) {
+        const copy = response.clone();
+        event.waitUntil(caches.open(CACHE).then((cache) => cache.put(event.request, copy)));
+      }
+      return response;
+    } catch {
+      if (event.request.mode !== 'navigate') return Response.error();
+      return (await caches.match('/', { ignoreSearch: true })) || caches.match('/index.html');
+    }
+  })());
 });

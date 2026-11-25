@@ -178,6 +178,7 @@ export async function flushEvents() {
   if (!events.length) return { sent: 0 };
   const response = await fetch('/api/events', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ events: events.slice(0, 500) }), signal: AbortSignal.timeout(3500) });
   if (!response.ok) throw new Error(`events HTTP ${response.status}`);
+  if (response.headers.get('x-saulat-offline') === '1') throw new Error('events deferred while offline');
   for (const event of events.slice(0, 500)) { try { await idbDelete('events', event.eventId); } catch { /* local fallback is best effort */ } }
   localStorage.removeItem(EVENTS_KEY);
   return response.json();
