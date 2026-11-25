@@ -1,11 +1,11 @@
 {
-  "runAt": "2026-11-25T05:41:27.942Z",
+  "runAt": "2026-11-25T06:26:12.116Z",
   "baseUrl": "http://localhost:3400",
   "synthetic": true,
   "note": "СИМУЛЯЦИЯ: браузерные персоны не являются реальными учениками.",
   "baseline": {
     "validate": "PASS (exit 0)",
-    "tests": "PASS (56/56, exit 0)"
+    "tests": "PASS (59/59, exit 0)"
   },
   "scenarios": [
     {
@@ -124,7 +124,7 @@
         "### Result",
         "Total messages: 0 (Errors: 0, Warnings: 0)"
       ],
-      "screenshot": "C:\\Users\\ertai\\Desktop\\hakaton\\Saulat_Sauat\\qa\\out\\screens\\ru-360-first.png"
+      "screenshot": "C:\\Users\\ertai\\Desktop\\hakaton\\Saulat_Sauat\\qa\\.tmp\\app-w5\\qa\\out\\screens\\ru-360-first.png"
     },
     {
       "id": "ru-768-first",
@@ -242,7 +242,7 @@
         "### Result",
         "Total messages: 0 (Errors: 0, Warnings: 0)"
       ],
-      "screenshot": "C:\\Users\\ertai\\Desktop\\hakaton\\Saulat_Sauat\\qa\\out\\screens\\ru-768-first.png"
+      "screenshot": "C:\\Users\\ertai\\Desktop\\hakaton\\Saulat_Sauat\\qa\\.tmp\\app-w5\\qa\\out\\screens\\ru-768-first.png"
     },
     {
       "id": "ru-1440-first",
@@ -360,7 +360,7 @@
         "### Result",
         "Total messages: 0 (Errors: 0, Warnings: 0)"
       ],
-      "screenshot": "C:\\Users\\ertai\\Desktop\\hakaton\\Saulat_Sauat\\qa\\out\\screens\\ru-1440-first.png"
+      "screenshot": "C:\\Users\\ertai\\Desktop\\hakaton\\Saulat_Sauat\\qa\\.tmp\\app-w5\\qa\\out\\screens\\ru-1440-first.png"
     },
     {
       "id": "kk-360-first",
@@ -432,7 +432,7 @@
             "answerIndex": 0,
             "evidenceIndex": 0,
             "hintsUsed": 0,
-            "status": "Әзірге сәйкес емес.Жауап: ×Дәлел: ×Бірінші әрекет сақталды."
+            "status": ""
           },
           {
             "index": 3,
@@ -478,7 +478,7 @@
         "### Result",
         "Total messages: 0 (Errors: 0, Warnings: 0)"
       ],
-      "screenshot": "C:\\Users\\ertai\\Desktop\\hakaton\\Saulat_Sauat\\qa\\out\\screens\\kk-360-first.png"
+      "screenshot": "C:\\Users\\ertai\\Desktop\\hakaton\\Saulat_Sauat\\qa\\.tmp\\app-w5\\qa\\out\\screens\\kk-360-first.png"
     },
     {
       "id": "kk-768-first",
@@ -596,7 +596,7 @@
         "### Result",
         "Total messages: 0 (Errors: 0, Warnings: 0)"
       ],
-      "screenshot": "C:\\Users\\ertai\\Desktop\\hakaton\\Saulat_Sauat\\qa\\out\\screens\\kk-768-first.png"
+      "screenshot": "C:\\Users\\ertai\\Desktop\\hakaton\\Saulat_Sauat\\qa\\.tmp\\app-w5\\qa\\out\\screens\\kk-768-first.png"
     },
     {
       "id": "kk-1440-first",
@@ -714,7 +714,7 @@
         "### Result",
         "Total messages: 0 (Errors: 0, Warnings: 0)"
       ],
-      "screenshot": "C:\\Users\\ertai\\Desktop\\hakaton\\Saulat_Sauat\\qa\\out\\screens\\kk-1440-first.png"
+      "screenshot": "C:\\Users\\ertai\\Desktop\\hakaton\\Saulat_Sauat\\qa\\.tmp\\app-w5\\qa\\out\\screens\\kk-1440-first.png"
     },
     {
       "id": "ru-360-random",
@@ -832,7 +832,7 @@
         "### Result",
         "Total messages: 0 (Errors: 0, Warnings: 0)"
       ],
-      "screenshot": "C:\\Users\\ertai\\Desktop\\hakaton\\Saulat_Sauat\\qa\\out\\screens\\ru-360-random.png"
+      "screenshot": "C:\\Users\\ertai\\Desktop\\hakaton\\Saulat_Sauat\\qa\\.tmp\\app-w5\\qa\\out\\screens\\ru-360-random.png"
     },
     {
       "id": "ru-360-hint-eater",
@@ -950,7 +950,7 @@
         "### Result",
         "Total messages: 0 (Errors: 0, Warnings: 0)"
       ],
-      "screenshot": "C:\\Users\\ertai\\Desktop\\hakaton\\Saulat_Sauat\\qa\\out\\screens\\ru-360-hint-eater.png"
+      "screenshot": "C:\\Users\\ertai\\Desktop\\hakaton\\Saulat_Sauat\\qa\\.tmp\\app-w5\\qa\\out\\screens\\ru-360-hint-eater.png"
     },
     {
       "id": "ru-360-double-click",
@@ -1068,10 +1068,10 @@
         "### Result",
         "Total messages: 0 (Errors: 0, Warnings: 0)"
       ],
-      "screenshot": "C:\\Users\\ertai\\Desktop\\hakaton\\Saulat_Sauat\\qa\\out\\screens\\ru-360-double-click.png"
+      "screenshot": "C:\\Users\\ertai\\Desktop\\hakaton\\Saulat_Sauat\\qa\\.tmp\\app-w5\\qa\\out\\screens\\ru-360-double-click.png"
     },
     {
-      "id": "ru-360-first",
+      "id": "ru-360-first-switch",
       "lang": "ru",
       "viewport": "360x800",
       "persona": "first",
@@ -1186,7 +1186,7 @@
         "### Result",
         "Total messages: 0 (Errors: 0, Warnings: 0)"
       ],
-      "screenshot": "C:\\Users\\ertai\\Desktop\\hakaton\\Saulat_Sauat\\qa\\out\\screens\\ru-360-first.png"
+      "screenshot": "C:\\Users\\ertai\\Desktop\\hakaton\\Saulat_Sauat\\qa\\.tmp\\app-w5\\qa\\out\\screens\\ru-360-first.png"
     },
     {
       "id": "diagnostic-ru-360",
@@ -1219,6 +1219,13 @@
           }
         },
         {
+          "stage": "diagnostic-start",
+          "begin": {
+            "count": 1,
+            "started": true
+          }
+        },
+        {
           "stage": "diagnostic-after",
           "audit": {
             "viewport": {
@@ -1229,7 +1236,7 @@
             "smallTargets": [],
             "focus": {
               "tag": "BUTTON",
-              "text": "←",
+              "text": "S\nSAUAT",
               "visible": true,
               "outline": "solid",
               "boxShadow": "none"
@@ -1248,8 +1255,30 @@
         "teacherImportAvailable": true
       },
       "hintsHidden": true,
-      "tasks": [],
-      "screenshot": "C:\\Users\\ertai\\Desktop\\hakaton\\Saulat_Sauat\\qa\\out\\screens\\diagnostic-ru-360.png"
+      "tasks": [
+        {
+          "index": 1,
+          "answerIndex": 0,
+          "evidenceIndex": 0,
+          "hintsUsed": 0,
+          "status": "Пока не сходится.Ответ: ×Доказательство: ×Первая попытка сохранена."
+        },
+        {
+          "index": 2,
+          "answerIndex": 0,
+          "evidenceIndex": 0,
+          "hintsUsed": 0,
+          "status": ""
+        },
+        {
+          "index": 3,
+          "answerIndex": 0,
+          "evidenceIndex": 0,
+          "hintsUsed": 0,
+          "status": ""
+        }
+      ],
+      "screenshot": "C:\\Users\\ertai\\Desktop\\hakaton\\Saulat_Sauat\\qa\\.tmp\\app-w5\\qa\\out\\screens\\diagnostic-ru-360.png"
     },
     {
       "id": "diagnostic-kk-768",
@@ -1282,6 +1311,13 @@
           }
         },
         {
+          "stage": "diagnostic-start",
+          "begin": {
+            "count": 1,
+            "started": true
+          }
+        },
+        {
           "stage": "diagnostic-after",
           "audit": {
             "viewport": {
@@ -1292,7 +1328,7 @@
             "smallTargets": [],
             "focus": {
               "tag": "BUTTON",
-              "text": "← Артқа",
+              "text": "S\nSAUAT\nОқы. Зертте. Дәлелде.",
               "visible": true,
               "outline": "solid",
               "boxShadow": "none"
@@ -1311,8 +1347,65 @@
         "teacherImportAvailable": true
       },
       "hintsHidden": true,
-      "tasks": [],
-      "screenshot": "C:\\Users\\ertai\\Desktop\\hakaton\\Saulat_Sauat\\qa\\out\\screens\\diagnostic-kk-768.png"
+      "tasks": [
+        {
+          "index": 1,
+          "answerIndex": 0,
+          "evidenceIndex": 0,
+          "hintsUsed": 0,
+          "status": "Әзірге сәйкес емес.Жауап: ×Дәлел: ×Бірінші әрекет сақталды."
+        },
+        {
+          "index": 2,
+          "answerIndex": 0,
+          "evidenceIndex": 0,
+          "hintsUsed": 0,
+          "status": ""
+        },
+        {
+          "index": 3,
+          "answerIndex": 0,
+          "evidenceIndex": 0,
+          "hintsUsed": 0,
+          "status": ""
+        }
+      ],
+      "screenshot": "C:\\Users\\ertai\\Desktop\\hakaton\\Saulat_Sauat\\qa\\.tmp\\app-w5\\qa\\out\\screens\\diagnostic-kk-768.png"
+    },
+    {
+      "id": "story-availability-ru-360",
+      "lang": "ru",
+      "viewport": "360x800",
+      "status": "FAIL",
+      "errors": [
+        "BUG-003: locked stories=02,03"
+      ],
+      "check": {
+        "cards": [
+          {
+            "id": "01",
+            "locked": false,
+            "hasOpenButton": true,
+            "text": "01\nОТКРЫТО\nЗолотой человек: находка и гипотеза\n\n0/4 миссии · 0 XP"
+          },
+          {
+            "id": "02",
+            "locked": true,
+            "hasOpenButton": false,
+            "text": "02\nСКОРО ОТКРОЕТСЯ\nАральское море: почему корабли оказались в пустыне?\n\n0/4 миссии · 0 XP"
+          },
+          {
+            "id": "03",
+            "locked": true,
+            "hasOpenButton": false,
+            "text": "03\nСКОРО ОТКРОЕТСЯ\nБайконур: космическая история Казахстана\n\n0/4 миссии · 0 XP"
+          }
+        ],
+        "lockedIds": [
+          "02",
+          "03"
+        ]
+      }
     },
     {
       "id": "tab-return-ru-360",
@@ -1342,7 +1435,7 @@
         "metric": "ГЛАВНАЯ МЕТРИКА\n0/3\n\nДоля диагностических заданий, выполненных верно с первой попытки и без под",
         "events": "3 событий",
         "hasCabinet": true,
-        "body": "Перейти к игре\nS\nSAUAT\n←\nГотово офлайн\nҚАЗ\nКАБИНЕТ УЧИТЕЛЯ\nРезультаты\n\nЭкспорт у ученика → импорт здесь.\n\nЭкспорт результатов\nИмпорт JSON-файлов\n\ne116d37f-1c29-48a4-90a0-5ac332dee33d: принято 3, дубликатов 0\n\nГЛАВНАЯ МЕТРИКА\n0/3\n\nДоля диагностических заданий, выполненных верно с первой попытки и без подсказок.\n\nНавыки\n3 событий\nНайди фрагмент\n0/1\nСделай вывод\n0/1\nДоказательство\n0/1"
+        "body": "Перейти к игре\nS\nSAUAT\n←\nГотово офлайн\nҚАЗ\nКАБИНЕТ УЧИТЕЛЯ\nРезультаты\n\nЭкспорт у ученика → импорт здесь.\n\nЭкспорт результатов\nИмпорт JSON-файлов\n\n0104f94d-b6b1-48c0-bdfe-d0d1b07d03cd: принято 3, дубликатов 0\n\nГЛАВНАЯ МЕТРИКА\n0/3\n\nДоля диагностических заданий, выполненных верно с первой попытки и без подсказок.\n\nНавыки\n3 событий\nНайди фрагмент\n0/1\nСделай вывод\n0/1\nДоказательство\n0/1"
       }
     },
     {
@@ -1360,10 +1453,11 @@
     }
   ],
   "summary": {
-    "scenarios": 15,
-    "failed": 1,
+    "scenarios": 16,
+    "failed": 2,
     "passed": 14,
     "failedIds": [
+      "story-availability-ru-360",
       "offline-ru-360"
     ]
   }

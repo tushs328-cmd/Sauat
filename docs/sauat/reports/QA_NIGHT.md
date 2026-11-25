@@ -11,19 +11,20 @@
 | attentive | 768×1024 | KK | PASS |
 | attentive | 1440×900 | KK | PASS |
 | random / hint-eater / double-click / language switch | 360×800 | RU | PASS |
-| diagnostic + hidden hints | 360×800 | RU | PASS |
-| diagnostic + hidden hints | 768×1024 | KK | PASS |
+| diagnostic: 3 tasks + hidden hints | 360×800 | RU | PASS |
+| diagnostic: 3 tasks + hidden hints | 768×1024 | KK | PASS |
+| story availability: cards 02/03 | 360×800 | RU | FAIL — BUG-003 |
 | tab close → return with progress | 360×800 | RU | PASS |
 | export → teacher import → metric check | 360×800 | RU | PASS |
 | offline reload and continue | 360×800 | RU | FAIL — BUG-001 |
 
-Итого актуального W1-прогона: 15 сценариев, 14 PASS, 1 FAIL. Горизонтальная прокрутка не обнаружена; фокус виден; изображения имели `complete=true` и `naturalWidth>0` в проверенных экранах. Найдены интерактивные цели меньше 44 px — BUG-002. Карточки Арал/Байконур закрыты — BUG-003. Кабинет принял `saulat-events.json`: 3 события, метрика `0/3`; возврат после закрытия вкладки сохранил IndexedDB history `1 → 1`.
+Итого актуального W1-прогона: 16 сценариев, 14 PASS, 2 FAIL. Горизонтальная прокрутка не обнаружена; фокус виден; изображения имели `complete=true` и `naturalWidth>0` в проверенных экранах. Найдены интерактивные цели меньше 44 px — BUG-002. Отдельная проверка доступности историй подтвердила, что карточки 02/03 закрыты — BUG-003. Диагностика реально прошла по 3 задания в RU и KK; подсказки скрыты. Кабинет принял `saulat-events.json`: 3 события, метрика `0/3`; возврат после закрытия вкладки сохранил IndexedDB history `1 → 1`.
 
 Команды и exit code:
 
 - `npm run validate` в копии с `INCLUDE_DRAFT=1` — exit 0; контент валиден, эвристические предупреждения о длине правильных вариантов остаются.
 - `npm test` в копии — exit 0; 59/59 тестов.
-- `node qa/run.js` из свежей копии `qa/.tmp/app-w5` при сервере `PORT=3400`, `INCLUDE_DRAFT=1` — exit 0; итог 14/15 PASS.
+- `node qa/run.js` из свежей копии `qa/.tmp/app-w5` при сервере `PORT=3400`, `INCLUDE_DRAFT=1` — exit 0; итог 14/16 PASS.
 
 Не сделано: offline reload всё ещё не восстановил shell/story (BUG-001); истории 02/03 остаются заблокированными (BUG-003). Не проверены ученический пилот, человек-проверка KK и живой Ollama.
 

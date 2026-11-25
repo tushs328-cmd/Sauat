@@ -133,7 +133,7 @@ function completePractice(session, persona, switchLanguage) {
 
 function runScenario({ lang, width, height, persona, switchLanguage = false }) {
   const session = `qa-${runStamp}-${lang}-${width}-${persona.replace(/[^a-z0-9-]/gi, '-')}`;
-  const result = { id: `${lang}-${width}-${persona}`, lang, viewport: `${width}x${height}`, persona, switchLanguage, status: 'PASS', evidence: [], errors: [] };
+  const result = { id: `${lang}-${width}-${persona}${switchLanguage ? '-switch' : ''}`, lang, viewport: `${width}x${height}`, persona, switchLanguage, status: 'PASS', evidence: [], errors: [] };
   try {
     fresh(session);
     code(session, `async page => { await page.evaluate(() => { localStorage.clear(); sessionStorage.clear(); }); await page.reload({ waitUntil: 'domcontentloaded' }); return true; }`);
@@ -160,7 +160,18 @@ function runDiagnostic({ lang, width, height }) {
   const result = { id: `diagnostic-${lang}-${width}`, lang, viewport: `${width}x${height}`, status: 'PASS', evidence: [], errors: [] };
   try {
     fresh(session);
-    selectLanguage(session, lang, width, height);
+    code(session, `async page => {
+      await page.setViewportSize({ width: ${width}, height: ${height} });
+      const label = ${JSON.stringify(lang === 'ru' ? 'РУ Русский' : 'ҚАЗ Қазақша')};
+      const language = page.getByRole('button', { name: label });
+      if (await language.count()) await language.click();
+      const start = page.getByRole('button', { name: /Начать маршрут|Бағытты бастау/ }).last();
+      if (await start.count()) await start.click();
+      const back = page.getByRole('button', { name: /Назад|Артқа/ }).first();
+      if (await back.count()) await back.click();
+      await page.waitForTimeout(300);
+      return true;
+    }`);
     result.export = code(session, `async page => {
       const button = page.getByRole("button", { name: /Экспорт результатов|Нәтижелерді экспорттау/ });
       const count = await button.count();
@@ -180,11 +191,61 @@ function runDiagnostic({ lang, width, height }) {
     }`);
     result.evidence.push({ stage: 'diagnostic-open', opened, audit: audit(session) });
     result.hintsHidden = opened.hintButtons === 0;
+    const begin = code(session, `async page => {
+      const button = page.getByRole('button', { name: /Начать диагностику|Диагностиканы бастау/ });
+      const count = await button.count();
+      if (count) await button.first().click();
+      return { count, started: count > 0 };
+    }`);
+    result.evidence.push({ stage: 'diagnostic-start', begin });
     result.tasks = completePractice(session, 'first', false).tasks;
     result.evidence.push({ stage: 'diagnostic-after', audit: audit(session) });
+    if (!result.hintsHidden || result.tasks.length < 3) {
+      result.status = 'FAIL';
+      result.errors.push(`Диагностика выполнена не полностью: tasks=${result.tasks.length}, hintsHidden=${result.hintsHidden}`);
+    }
     const shot = path.join(screenshotsDir, `diagnostic-${lang}-${width}.png`);
     code(session, `async page => { await page.screenshot({ path: ${JSON.stringify(shot)}, fullPage: true }); return ${JSON.stringify(shot)}; }`);
     result.screenshot = shot;
+  } catch (error) {
+    result.status = 'FAIL';
+    result.errors.push(String(error));
+  } finally {
+    cli(session, ['close']);
+  }
+  return result;
+}
+
+function runStoryAvailability({ lang, width, height }) {
+  const session = `qa-${runStamp}-story-availability-${lang}-${width}`;
+  const result = { id: `story-availability-${lang}-${width}`, lang, viewport: `${width}x${height}`, status: 'PASS', errors: [] };
+  try {
+    fresh(session);
+    code(session, `async page => {
+      await page.setViewportSize({ width: ${width}, height: ${height} });
+      const label = ${JSON.stringify(lang === 'ru' ? 'РУ Русский' : 'ҚАЗ Қазақша')};
+      const language = page.getByRole('button', { name: label });
+      if (await language.count()) await language.click();
+      const start = page.getByRole('button', { name: /Начать маршрут|Бағытты бастау/ }).last();
+      if (await start.count()) await start.click();
+      const back = page.getByRole('button', { name: /Назад|Артқа/ }).first();
+      if (await back.count()) await back.click();
+      await page.waitForTimeout(300);
+      return true;
+    }`);
+    result.check = code(session, `async page => {
+      const cards = await page.locator('article.adventure-node').evaluateAll((nodes) => nodes.map((node, index) => ({
+        id: String(index + 1).padStart(2, '0'),
+        locked: node.classList.contains('locked'),
+        hasOpenButton: Boolean(node.querySelector('button[data-action="open-story"]')),
+        text: (node.innerText || '').slice(0, 240)
+      })));
+      return { cards, lockedIds: cards.filter((card) => card.locked).map((card) => card.id) };
+    }`);
+    if (result.check.lockedIds.length) {
+      result.status = 'FAIL';
+      result.errors.push(`BUG-003: locked stories=${result.check.lockedIds.join(',')}`);
+    }
   } catch (error) {
     result.status = 'FAIL';
     result.errors.push(String(error));
@@ -327,7 +388,7 @@ const results = {
   baseUrl,
   synthetic: true,
   note: 'СИМУЛЯЦИЯ: браузерные персоны не являются реальными учениками.',
-  baseline: { validate: 'PASS (exit 0)', tests: 'PASS (56/56, exit 0)' },
+  baseline: { validate: 'PASS (exit 0)', tests: 'PASS (59/59, exit 0)' },
   scenarios: []
 };
 const maxScenarios = Number(process.env.QA_MAX_SCENARIOS || 0);
@@ -348,6 +409,7 @@ addScenario('ru-360-double-click', () => runScenario({ lang: 'ru', width: 360, h
 addScenario('ru-360-first-switch', () => runScenario({ lang: 'ru', width: 360, height: 800, persona: 'first', switchLanguage: true }));
 addScenario('diagnostic-ru-360', () => runDiagnostic({ lang: 'ru', width: 360, height: 800 }));
 addScenario('diagnostic-kk-768', () => runDiagnostic({ lang: 'kk', width: 768, height: 1024 }));
+addScenario('story-availability-ru-360', () => runStoryAvailability({ lang: 'ru', width: 360, height: 800 }));
 addScenario('tab-return-ru-360', () => runTabReturn({ lang: 'ru', width: 360, height: 800 }));
 addScenario('teacher-import-ru-360', () => runTeacherImport({ lang: 'ru', width: 360, height: 800 }));
 addScenario('offline-ru-360', () => runOffline({ lang: 'ru', width: 360, height: 800 }));
