@@ -120,7 +120,8 @@ function staticStorageModule(source) {
     .replace('export async function flushEvents() {\n  if (!navigator.onLine)', 'export async function flushEvents() {\n  if (STATIC_BUILD || !navigator.onLine)');
 }
 
-const manifest = createManifest({ includeDraft: false, includeFixture: false });
+const includeDraft = process.argv.includes('--include-draft');
+const manifest = createManifest({ includeDraft, includeFixture: false });
 fs.rmSync(distRoot, { recursive: true, force: true });
 fs.cpSync(publicRoot, distRoot, { recursive: true });
 fs.mkdirSync(path.join(distRoot, 'content'), { recursive: true });
@@ -148,4 +149,5 @@ main = main.replace("? `/${file}` : file", "? staticUrl(file) : file");
 main = main.replace("if (navigator.onLine) { try { const response = await fetch('/api/mentor'", "if (navigator.onLine && !globalThis.__SAULAT_STATIC__) { try { const response = await fetch('/api/mentor'");
 write(path.join(distRoot, 'js', 'main.js'), main);
 
-console.log(`Static build created: ${path.relative(projectRoot, distRoot)} (${manifest.stories.length} published stories).`);
+const mode = includeDraft ? 'demo draft' : 'published';
+console.log(`Static build created: ${path.relative(projectRoot, distRoot)} (${manifest.stories.length} ${mode} stories).`);

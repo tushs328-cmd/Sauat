@@ -7,7 +7,10 @@ import { spawnSync } from 'node:child_process';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const distRoot = path.join(projectRoot, 'dist');
-const build = spawnSync(process.execPath, ['scripts/build-static.mjs'], { cwd: projectRoot, encoding: 'utf8' });
+const includeDraft = process.argv.includes('--include-draft');
+const buildArgs = ['scripts/build-static.mjs'];
+if (includeDraft) buildArgs.push('--include-draft');
+const build = spawnSync(process.execPath, buildArgs, { cwd: projectRoot, encoding: 'utf8' });
 process.stdout.write(build.stdout || '');
 process.stderr.write(build.stderr || '');
 assert.equal(build.status, 0, 'static build must exit 0');
@@ -33,12 +36,28 @@ try {
   assert.match(index, /src="\.\/js\/main\.js"/);
 
   const manifest = await (await fetch(`${base}content/manifest.json`)).json();
-  assert.equal(manifest.stories.some((story) => story.reviewStatus?.ru === 'draft' || story.reviewStatus?.kk === 'draft'), false);
+  if (includeDraft) {
+    const practice = manifest.stories.filter((story) => story.kind === 'practice');
+    const diagnostic = manifest.stories.filter((story) => story.kind === 'diagnostic');
+    assert.equal(practice.length, 3, 'demo manifest must contain case_001..003');
+    assert.equal(diagnostic.length, 2, 'demo manifest must contain diag_entry and diag_exit');
+    assert.deepEqual(manifest.stories.map((story) => story.id), [
+      'case_001', 'case_002', 'case_003', 'diag_entry_001', 'diag_exit_001'
+    ]);
+    assert.ok(manifest.stories.every((story) => story.reviewStatus?.kk === 'draft' && story.reviewStatus?.ru === 'draft'));
+    for (const story of manifest.stories) {
+      assert.ok(fs.existsSync(path.join(distRoot, 'content', story.file)), `${story.file} must be copied to dist`);
+      for (const asset of story.assets || []) assert.ok(fs.existsSync(path.join(distRoot, asset)), `${asset} must be present in dist`);
+    }
+  } else {
+    assert.equal(manifest.stories.some((story) => story.reviewStatus?.ru === 'draft' || story.reviewStatus?.kk === 'draft'), false);
+  }
   assert.equal(manifest.stories.some((story) => story.isTestFixture), false);
 
   const serviceWorker = await (await fetch(`${base}sw.js`)).text();
   assert.doesNotMatch(serviceWorker, /fetch\(['"]\//);
   assert.match(serviceWorker, /new URL\('\.'|new URL\(String\(value\)/);
+  assert.match(serviceWorker, /cache\.addAll\(plan\.urls\)/);
 
   const main = fs.readFileSync(path.join(distRoot, 'js', 'main.js'), 'utf8');
   const storage = fs.readFileSync(path.join(distRoot, 'js', 'storage.js'), 'utf8');
@@ -48,7 +67,8 @@ try {
   assert.match(storage, /STATIC_BUILD/);
   assert.match(storage, /localStorage\.setItem\(EVENTS_KEY/);
   assert.match(offline, /new URL\('\.\.\/sw\.js', import\.meta\.url\)/);
-  console.log(`Static smoke PASS: ${base} served index, manifest, relative SW and offline rules/export guards.`);
+  const mode = includeDraft ? 'demo manifest 3 practice + 2 diagnostic stories' : 'published manifest';
+  console.log(`Static smoke PASS: ${base} served ${mode}, content/assets, relative SW precache and offline rules/export guards.`);
 } finally {
   await new Promise((resolve) => server.close(resolve));
 }
