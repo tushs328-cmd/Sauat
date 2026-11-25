@@ -1,7 +1,7 @@
 # BUG-002 — dist touch-target audit
 
-Дата: 25.11.2026  
-Сборка: `npm run build:demo` — exit 0  
+Дата: 25.11.2026
+Сборка: `npm run build:demo` — exit 0
 Браузер: реальный Chrome через Playwright CLI, viewport `360×800`, dist через
 `py -m http.server 4174 --directory dist`.
 
