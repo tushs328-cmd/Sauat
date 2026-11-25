@@ -1,29 +1,36 @@
-# QA_NIGHT — W1
+# QA_NIGHT — финальный прогон W2
 
-СИМУЛЯЦИЯ: все персоны ниже — синтетические браузерные сценарии, не реальные ученики.
+Дата: 25.11.2026. Сценарии ниже проверены на локальном demo dist; это не
+пилот с реальными учениками и не проверка внешнего hosting URL.
 
-| Тест | Viewport | Язык | Результат |
-|---|---:|---|---|
-| attentive | 360×800 | RU | PASS |
-| attentive | 768×1024 | RU | PASS |
-| attentive | 1440×900 | RU | PASS |
-| attentive | 360×800 | KK | PASS |
-| attentive | 768×1024 | KK | PASS |
-| attentive | 1440×900 | KK | PASS |
-| random / hint-eater / double-click / language switch | 360×800 | RU | PASS |
-| diagnostic: 3 tasks + hidden hints | RU/KK × 360/768/1440 | all six contexts | PASS |
-| story availability: cards 02/03 | RU/KK × 360/768/1440 | all six contexts | FAIL — BUG-003 |
-| tab close → return with progress | 360×800 | RU | PASS |
-| export → teacher import → metric check | 360×800 | RU | PASS |
-| offline reload and continue | 360×800 | RU | FAIL — BUG-001 |
+| Проверка | Viewport | Результат |
+|---|---:|---|
+| `build:demo`: 4 practice + 2 diagnostic | — | PASS |
+| static smoke: manifest, JSON, assets, SW precache | — | PASS |
+| карта demo с шестью историями | 360×800 | PASS |
+| story/practice case_001–004, touch targets | 360×800 | PASS — `0` целей ниже 44×44 |
+| story/practice case_001–004, overflow | 360×800 | PASS — `scrollWidth=345` |
+| story/practice case_001–004, keyboard focus | 360×800 | PASS — видимый outline |
+| story images / fallback illustration | 360×800 | PASS |
+| `npm run qa`: validate + tests + Docker smoke | — | PASS |
 
-Итого актуального W1-прогона: 25 сценариев, 18 PASS, 7 FAIL. Горизонтальная прокрутка не обнаружена; фокус виден; изображения имели `complete=true` и `naturalWidth>0` в проверенных экранах. Найдены интерактивные цели меньше 44 px — BUG-002. Проверка доступности историй во всех шести RU/KK-вьюпортах подтвердила, что карточки 02/03 закрыты — BUG-003. Диагностика реально прошла по 3 задания во всех шести RU/KK-вьюпортах; подсказки скрыты. Кабинет принял `saulat-events.json`: 3 события, метрика `0/3`; возврат после закрытия вкладки сохранил IndexedDB history `1 → 1`.
+## BUG-002
 
-Команды и exit code:
+Повторный аудит на реальном Chrome в dist охватил карту и все восемь экранов
+story/practice для case_001–004. Найдено `0` интерактивных целей меньше
+`44×44 px`; на карте проверено 17 элементов. Горизонтального переполнения нет:
+`scrollWidth=345` при viewport `360`. Фокус с клавиатуры виден на каждом
+проверенном экране. **BUG-002 закрыт для demo dist.** Подробная таблица сохранена
+в [`qa/BUG-002_DIST_360.md`](../../../qa/BUG-002_DIST_360.md).
 
-- `npm run validate` в копии с `INCLUDE_DRAFT=1` — exit 0; контент валиден, эвристические предупреждения о длине правильных вариантов остаются.
-- `npm test` в копии — exit 0; 59/59 тестов.
-- `node qa/run.js` из свежей копии `qa/.tmp/app-w5` при сервере `PORT=3400`, `INCLUDE_DRAFT=1` — exit 0; итог 18/25 PASS.
+## Команды и exit code
 
-Не сделано: offline reload всё ещё не восстановил shell/story (BUG-001); истории 02/03 остаются заблокированными (BUG-003). Не проверены ученический пилот, человек-проверка KK и живой Ollama.
+- `npm run build:demo` — exit 0; dist содержит 4 practice и 2 diagnostic.
+- `node scripts/static-smoke.mjs --include-draft` — exit 0.
+- Playwright CLI, headed Chrome, 360×800 — exit 0; карта и 8 story/practice
+  экранов проверены, `0` целей ниже 44×44.
+- `npm run qa` — exit 0: validate, `npm test` 59/59, Docker smoke PASS.
+
+Ограничения остаются прежними: внешний hosting URL, человеческая проверка KK,
+реальный ученический пилот и production-нагрузка этим прогоном не подтверждены.
 
