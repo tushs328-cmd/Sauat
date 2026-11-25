@@ -9,7 +9,7 @@
 | W3 фактчек | DONE с ручными follow-up | `FACTS_case_001/002/003.md`; 28/31 сегментов подтверждены, 3 частично/не полностью доступны, противоречий P0/P1 не найдено |
 | W4 KK lint | DONE как статический аудит | `tools/qa/kk_lint.js`, `KK_LINT.md`, 6 мест для проверки человеком |
 | W5 a11y/perf | ЧАСТИЧНО, измерения добавлены | `tools/qa/a11y_perf.js`, `qa/out/a11y-perf.json`: 7 synthetic sessions, ресурсы/overflow/focus/именованные цели/slow-network proxy; axe/Lighthouse не доступны |
-| W6 demo video | DONE | commit `e574d33`, `tools/demo/run.js`, `docs/demo/sauat-demo.webm` 183.2 с, `demo-run.json` без ошибки |
+| W6 demo video | DONE | commit `cdd2331`, `tools/demo/run.js`, `docs/demo/demo.webm` 167.4 с (~2:47), `demo-run.json` без ошибки |
 | W7 submission kit | DONE как draft | `SUBMISSION_KIT.md`; текст формы, 10 слайдов и 10 честных Q&A готовы, отправка не выполнялась |
 
 ## Топ дефектов
