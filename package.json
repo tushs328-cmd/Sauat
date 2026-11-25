@@ -10,6 +10,8 @@
   "scripts": {
     "start": "node src/server.js",
     "test": "node --test",
+    "build:static": "node scripts/build-static.mjs",
+    "test:static": "node scripts/static-smoke.mjs",
     "eval:ai": "node eval/run-eval.js",
     "eval:persona": "node eval/persona/run-eval.js",
     "validate": "node src/content-validator.js",
