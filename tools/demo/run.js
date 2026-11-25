@@ -8,7 +8,7 @@ const baseUrl = process.env.DEMO_BASE_URL || 'http://localhost:3400';
 const durationMs = Number(process.env.DEMO_DURATION_MS || 180000);
 const cliOverheadMs = 56_000;
 const outputDir = path.resolve(process.env.DEMO_OUTPUT_DIR || path.join(root, 'docs', 'demo'));
-const videoPath = path.join(outputDir, process.env.DEMO_VIDEO_NAME || 'sauat-demo.webm');
+const videoPath = path.join(outputDir, process.env.DEMO_VIDEO_NAME || 'demo.webm');
 const session = `sauat-demo-${Date.now()}`;
 const npx = process.platform === 'win32'
   ? path.join(path.dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npx-cli.js')
