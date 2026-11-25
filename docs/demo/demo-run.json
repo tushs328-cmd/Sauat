@@ -1,0 +1,9 @@
+{
+  "synthetic": true,
+  "note": "СИМУЛЯЦИЯ: демонстрационный браузерный сценарий, не реальные ученики.",
+  "baseUrl": "http://localhost:3400",
+  "durationMs": 180000,
+  "videoPath": "C:\\Users\\ertai\\Desktop\\hakaton\\Saulat_Sauat\\docs\\demo\\sauat-demo.webm",
+  "session": "sauat-demo-1795583250669",
+  "error": null
+}
