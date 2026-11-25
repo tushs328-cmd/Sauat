@@ -1,0 +1,235 @@
+{
+  "synthetic": true,
+  "note": "СИМУЛЯЦИЯ: браузерный audit, не реальные ученики.",
+  "baseUrl": "http://localhost:3400",
+  "axeCore": "not installed",
+  "lighthouse": "not installed",
+  "sessions": [
+    {
+      "lang": "ru",
+      "width": 360,
+      "height": 800,
+      "network": "normal",
+      "audit": {
+        "viewport": {
+          "width": 360,
+          "height": 800
+        },
+        "horizontalOverflow": false,
+        "focus": {
+          "tag": "BODY",
+          "outline": "none",
+          "boxShadow": "none"
+        },
+        "interactiveCount": 4,
+        "unnamedInteractiveCount": 0,
+        "smallTargets": [],
+        "images": [],
+        "emptyLeafCount": 6,
+        "navigation": {
+          "domContentLoaded": 31,
+          "domInteractive": 19,
+          "loadEventEnd": 31,
+          "responseStart": 3,
+          "transferSize": 1059
+        },
+        "resources": {
+          "count": 15,
+          "transferSize": 174080,
+          "duration": 44
+        }
+      }
+    },
+    {
+      "lang": "ru",
+      "width": 360,
+      "height": 800,
+      "network": "150ms response delay",
+      "audit": {
+        "elapsedToDomContentLoaded": 187,
+        "navigation": {
+          "domContentLoaded": 179,
+          "domInteractive": 170,
+          "loadEventEnd": 180,
+          "ttiProxy": 170
+        },
+        "bodyText": "Перейти к игре\nS\nИГРОВОЕ ЧТЕНИЕ · БЕЗ РЕГИСТРАЦИИ\nSAUAT\n\nЧитай. Исследуй. Доказывай.\n\nРазберись в истории по фрагментам, проверь вывод и забери артефакт.\n\nРЕКОНСТРУКЦИЯ · SAUAT\nВыбери язык путешествия"
+      }
+    },
+    {
+      "lang": "ru",
+      "width": 768,
+      "height": 1024,
+      "network": "normal",
+      "audit": {
+        "viewport": {
+          "width": 768,
+          "height": 1024
+        },
+        "horizontalOverflow": false,
+        "focus": {
+          "tag": "BODY",
+          "outline": "none",
+          "boxShadow": "none"
+        },
+        "interactiveCount": 4,
+        "unnamedInteractiveCount": 0,
+        "smallTargets": [],
+        "images": [],
+        "emptyLeafCount": 6,
+        "navigation": {
+          "domContentLoaded": 179,
+          "domInteractive": 170,
+          "loadEventEnd": 180,
+          "responseStart": 160,
+          "transferSize": 1059
+        },
+        "resources": {
+          "count": 15,
+          "transferSize": 0,
+          "duration": 2
+        }
+      }
+    },
+    {
+      "lang": "ru",
+      "width": 1440,
+      "height": 900,
+      "network": "normal",
+      "audit": {
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "horizontalOverflow": false,
+        "focus": {
+          "tag": "BODY",
+          "outline": "none",
+          "boxShadow": "none"
+        },
+        "interactiveCount": 4,
+        "unnamedInteractiveCount": 0,
+        "smallTargets": [],
+        "images": [],
+        "emptyLeafCount": 6,
+        "navigation": {
+          "domContentLoaded": 179,
+          "domInteractive": 170,
+          "loadEventEnd": 180,
+          "responseStart": 160,
+          "transferSize": 1059
+        },
+        "resources": {
+          "count": 15,
+          "transferSize": 0,
+          "duration": 2
+        }
+      }
+    },
+    {
+      "lang": "kk",
+      "width": 360,
+      "height": 800,
+      "network": "normal",
+      "audit": {
+        "viewport": {
+          "width": 360,
+          "height": 800
+        },
+        "horizontalOverflow": false,
+        "focus": {
+          "tag": "BODY",
+          "outline": "none",
+          "boxShadow": "none"
+        },
+        "interactiveCount": 4,
+        "unnamedInteractiveCount": 0,
+        "smallTargets": [],
+        "images": [],
+        "emptyLeafCount": 6,
+        "navigation": {
+          "domContentLoaded": 179,
+          "domInteractive": 170,
+          "loadEventEnd": 180,
+          "responseStart": 160,
+          "transferSize": 1059
+        },
+        "resources": {
+          "count": 15,
+          "transferSize": 0,
+          "duration": 2
+        }
+      }
+    },
+    {
+      "lang": "kk",
+      "width": 768,
+      "height": 1024,
+      "network": "normal",
+      "audit": {
+        "viewport": {
+          "width": 768,
+          "height": 1024
+        },
+        "horizontalOverflow": false,
+        "focus": {
+          "tag": "BODY",
+          "outline": "none",
+          "boxShadow": "none"
+        },
+        "interactiveCount": 4,
+        "unnamedInteractiveCount": 0,
+        "smallTargets": [],
+        "images": [],
+        "emptyLeafCount": 6,
+        "navigation": {
+          "domContentLoaded": 179,
+          "domInteractive": 170,
+          "loadEventEnd": 180,
+          "responseStart": 160,
+          "transferSize": 1059
+        },
+        "resources": {
+          "count": 15,
+          "transferSize": 0,
+          "duration": 2
+        }
+      }
+    },
+    {
+      "lang": "kk",
+      "width": 1440,
+      "height": 900,
+      "network": "normal",
+      "audit": {
+        "viewport": {
+          "width": 1440,
+          "height": 900
+        },
+        "horizontalOverflow": false,
+        "focus": {
+          "tag": "BODY",
+          "outline": "none",
+          "boxShadow": "none"
+        },
+        "interactiveCount": 4,
+        "unnamedInteractiveCount": 0,
+        "smallTargets": [],
+        "images": [],
+        "emptyLeafCount": 6,
+        "navigation": {
+          "domContentLoaded": 179,
+          "domInteractive": 170,
+          "loadEventEnd": 180,
+          "responseStart": 160,
+          "transferSize": 1059
+        },
+        "resources": {
+          "count": 15,
+          "transferSize": 0,
+          "duration": 2
+        }
+      }
+    }
+  ]
+}
