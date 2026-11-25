@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { createHash } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { createManifest, projectRoot } from '../src/content.js';
 
@@ -62,9 +63,9 @@ export async function loadContent() {
 `;
 }
 
-function staticServiceWorker() {
+function staticServiceWorker(cacheVersion) {
   return `const ROOT = new URL('./', self.location.href);
-const CACHE = \`saulat-static-v1-\${ROOT.pathname}\`;
+const CACHE = \`saulat-static-${cacheVersion}-\${ROOT.pathname}\`;
 const at = (value) => new URL(String(value).replace(/^\\/+/, ''), ROOT).href;
 const SHELL = [
   '', 'index.html', 'sauat.css', 'manifest.webmanifest', 'sw.js', 'dev/fixture.json',
@@ -122,6 +123,7 @@ function staticStorageModule(source) {
 
 const includeDraft = process.argv.includes('--include-draft');
 const manifest = createManifest({ includeDraft, includeFixture: false });
+const cacheVersion = createHash('sha256').update(JSON.stringify(manifest)).digest('hex').slice(0, 12);
 fs.rmSync(distRoot, { recursive: true, force: true });
 fs.cpSync(publicRoot, distRoot, { recursive: true });
 fs.mkdirSync(path.join(distRoot, 'content'), { recursive: true });
@@ -134,7 +136,7 @@ for (const story of manifest.stories) {
 write(path.join(distRoot, 'index.html'), relativeHtml(fs.readFileSync(path.join(publicRoot, 'index.html'), 'utf8')));
 write(path.join(distRoot, 'legacy.html'), relativeHtml(fs.readFileSync(path.join(publicRoot, 'legacy.html'), 'utf8')));
 write(path.join(distRoot, 'manifest.webmanifest'), fs.readFileSync(path.join(publicRoot, 'manifest.webmanifest'), 'utf8').replace('"start_url": "/"', '"start_url": "./"'));
-write(path.join(distRoot, 'sw.js'), staticServiceWorker());
+write(path.join(distRoot, 'sw.js'), staticServiceWorker(cacheVersion));
 write(path.join(distRoot, 'js', 'content.js'), staticContentModule());
 write(path.join(distRoot, 'js', 'storage.js'), staticStorageModule(fs.readFileSync(path.join(publicRoot, 'js', 'storage.js'), 'utf8')));
 let offline = fs.readFileSync(path.join(publicRoot, 'js', 'offline.js'), 'utf8');

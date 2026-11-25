@@ -4,6 +4,7 @@ import http from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const distRoot = path.join(projectRoot, 'dist');
@@ -39,10 +40,10 @@ try {
   if (includeDraft) {
     const practice = manifest.stories.filter((story) => story.kind === 'practice');
     const diagnostic = manifest.stories.filter((story) => story.kind === 'diagnostic');
-    assert.equal(practice.length, 3, 'demo manifest must contain case_001..003');
+    assert.equal(practice.length, 4, 'demo manifest must contain case_001..004');
     assert.equal(diagnostic.length, 2, 'demo manifest must contain diag_entry and diag_exit');
     assert.deepEqual(manifest.stories.map((story) => story.id), [
-      'case_001', 'case_002', 'case_003', 'diag_entry_001', 'diag_exit_001'
+      'case_001', 'case_002', 'case_003', 'case_004', 'diag_entry_001', 'diag_exit_001'
     ]);
     assert.ok(manifest.stories.every((story) => story.reviewStatus?.kk === 'draft' && story.reviewStatus?.ru === 'draft'));
     for (const story of manifest.stories) {
@@ -58,6 +59,8 @@ try {
   assert.doesNotMatch(serviceWorker, /fetch\(['"]\//);
   assert.match(serviceWorker, /new URL\('\.'|new URL\(String\(value\)/);
   assert.match(serviceWorker, /cache\.addAll\(plan\.urls\)/);
+  const cacheVersion = createHash('sha256').update(JSON.stringify(manifest)).digest('hex').slice(0, 12);
+  assert.match(serviceWorker, new RegExp(`saulat-static-${cacheVersion}-`), 'SW cache must change when the manifest changes');
 
   const main = fs.readFileSync(path.join(distRoot, 'js', 'main.js'), 'utf8');
   const storage = fs.readFileSync(path.join(distRoot, 'js', 'storage.js'), 'utf8');
@@ -67,7 +70,7 @@ try {
   assert.match(storage, /STATIC_BUILD/);
   assert.match(storage, /localStorage\.setItem\(EVENTS_KEY/);
   assert.match(offline, /new URL\('\.\.\/sw\.js', import\.meta\.url\)/);
-  const mode = includeDraft ? 'demo manifest 3 practice + 2 diagnostic stories' : 'published manifest';
+  const mode = includeDraft ? 'demo manifest 4 practice + 2 diagnostic stories' : 'published manifest';
   console.log(`Static smoke PASS: ${base} served ${mode}, content/assets, relative SW precache and offline rules/export guards.`);
 } finally {
   await new Promise((resolve) => server.close(resolve));
