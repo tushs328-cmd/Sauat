@@ -23,13 +23,20 @@ before(async () => {
 });
 after(() => { clearSessions(); server.close(); });
 
-test('главная страница доступна без CDN', async () => {
+test('новая и legacy главные страницы доступны без внешних URL', async () => {
   const response = await fetch(`${base}/`);
   const html = await response.text();
   assert.equal(response.status, 200);
   assert.match(html, /Сауат/);
-  assert.match(html, /styles\.css/);
+  assert.match(html, /\/sauat\.css/);
   assert.doesNotMatch(html, /https?:\/\//);
+
+  const legacy = await fetch(`${base}/legacy.html`);
+  const legacyHtml = await legacy.text();
+  assert.equal(legacy.status, 200);
+  assert.match(legacyHtml, /Сауат/);
+  assert.match(legacyHtml, /styles\.css/);
+  assert.doesNotMatch(legacyHtml, /https?:\/\//);
 });
 
 test('язык влияет на адаптивно выбранное задание', async () => {

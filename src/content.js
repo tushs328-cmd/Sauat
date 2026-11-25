@@ -35,8 +35,14 @@ export function createManifest({ includeFixture = includeFixtureByDefault(), inc
       id: story.id,
       kind: story.kind,
       file: story.file,
-      assets: story.image?.file ? [story.image.file] : []
-    }));
+      assets: story.image?.file ? [story.image.file] : [],
+      reviewStatus: story.reviewStatus,
+      title: story.title
+    }))
+    .sort((left, right) => {
+      const kindOrder = { practice: 0, diagnostic: 1 };
+      return (kindOrder[left.kind] - kindOrder[right.kind]) || left.id.localeCompare(right.id);
+    });
   const contentVersion = result.stories.reduce((version, story) => Math.max(version, story.contentVersion), 1);
   return { contentVersion, stories };
 }

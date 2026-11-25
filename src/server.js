@@ -52,7 +52,7 @@ function makeRateLimiter(limit = 30, windowMs = 60_000) {
   };
 }
 
-export function createApp({ dataPath = defaultDataPath } = {}) {
+export function createApp({ dataPath = defaultDataPath, mentorContextResolver = getMentorContext } = {}) {
   const app = express();
   const storage = createStorage(dataPath);
   const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 2 * 1024 * 1024 } });
@@ -89,8 +89,9 @@ export function createApp({ dataPath = defaultDataPath } = {}) {
     if (Buffer.byteLength(JSON.stringify(req.body ?? {}), 'utf8') > 2048) return res.status(413).json({ error: 'Тело запроса не должно превышать 2 КБ.' });
     const inputError = validateMentorInput(req.body);
     if (inputError) return res.status(400).json({ error: inputError });
-    const context = getMentorContext(req.body);
+    const context = mentorContextResolver(req.body);
     if (!context) return res.status(404).json({ error: 'История или задание не найдены' });
+    if (context.story.kind === 'diagnostic') return res.status(400).json({ error: 'ИИ-наставник запрещён для diagnostic-историй.' });
     return askStructuredMentor(req.body, context).then((result) => res.json(result)).catch(() => res.json({ strategy: 'locate', hintId: context.hintIds[0] || null, nextTaskId: context.nextTaskIds[0] || null, source: 'rules' }));
   });
 

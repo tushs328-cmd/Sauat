@@ -106,6 +106,88 @@ function crossValidateStory(story) {
   return errors;
 }
 
+function warningDiagnostic(instancePath, message, suggestion) {
+  return diagnostic(instancePath, message, suggestion, 'content-warning');
+}
+
+function contentWarnings(story) {
+  const warnings = [];
+  if (!story || !Array.isArray(story.documents) || !Array.isArray(story.tasks)) return warnings;
+  const segments = story.documents.flatMap((document) => Array.isArray(document.segments) ? document.segments : []);
+  if (segments.length > 12) {
+    warnings.push(warningDiagnostic('/documents', `в истории ${segments.length} сегментов`, 'Сократите материал или разделите историю на более короткие документы.'));
+  }
+  const numbers = segments.map((segment) => /^e(\d+)$/.exec(segment.id || '')?.[1]).filter(Boolean).map(Number);
+  if (numbers.length && numbers.some((number, index) => number !== index + 1)) {
+    warnings.push(warningDiagnostic('/documents/segments', 'пропуск в нумерации сегментов', 'Используйте последовательные ID e1, e2, e3 без пропусков.'));
+  }
+  const segmentIds = new Set(segments.map((segment) => segment.id));
+  const referencePattern = /(?:^|[^\p{L}\p{N}_])([eе]\d+)(?![\p{L}\p{N}_])/giu;
+  for (const [taskIndex, task] of story.tasks.entries()) {
+    if (!Array.isArray(task.options)) continue;
+    const correctIds = new Set(task.correctOptionIds || []);
+    for (const language of ['ru', 'kk']) {
+      const optionTexts = task.options.map((option) => String(option.text?.[language] || '').trim());
+      const translatedCount = optionTexts.filter(Boolean).length;
+      if (translatedCount !== task.options.length) {
+        warnings.push(warningDiagnostic(`/tasks/${taskIndex}/options`, `не совпадает число непустых options для ${language}`, 'Заполните каждый вариант на обоих языках.'));
+      }
+      const maxLength = Math.max(0, ...optionTexts.map((text) => text.length));
+      if (maxLength > 0 && task.options.some((option, optionIndex) => correctIds.has(option.id) && optionTexts[optionIndex].length === maxLength)) {
+        warnings.push(warningDiagnostic(`/tasks/${taskIndex}/correctOptionIds`, `корректный вариант является самым длинным в ${language}`, 'Проверьте, не выдаёт ли длина варианта правильный ответ.'));
+      }
+      const shortTexts = new Map();
+      optionTexts.forEach((text, optionIndex) => {
+        const normalized = text.toLocaleLowerCase().replace(/\s+/g, ' ').trim();
+        if (normalized.length > 0 && normalized.length <= 80) {
+          const previous = shortTexts.get(normalized);
+          if (previous !== undefined) {
+            warnings.push(warningDiagnostic(`/tasks/${taskIndex}/options/${optionIndex}`, `варианты ${language} имеют одинаковый короткий текст`, 'Сделайте варианты различимыми по смыслу.'));
+          } else {
+            shortTexts.set(normalized, optionIndex);
+          }
+        }
+      });
+    }
+    const referencedTexts = [...(task.hints || []).map((hint) => hint.text), task.explanation];
+    referencedTexts.forEach((bilingual, textIndex) => {
+      for (const language of ['ru', 'kk']) {
+        const text = String(bilingual?.[language] || '');
+        for (const match of text.matchAll(referencePattern)) {
+          const reference = match[1].replace(/^е/i, 'e');
+          if (!segmentIds.has(reference)) {
+            warnings.push(warningDiagnostic(`/tasks/${taskIndex}/${textIndex === referencedTexts.length - 1 ? 'explanation' : 'hints'}`, `ссылка на несуществующий сегмент «${reference}»`, 'Исправьте ссылку на существующий segment ID.'));
+          }
+        }
+      }
+    });
+  }
+  return warnings;
+}
+
+function diagnosticStoryErrors(story) {
+  if (story?.kind !== 'diagnostic') return [];
+  const errors = [];
+  const expected = [
+    { id: 't1', skill: 'find' },
+    { id: 't2', skill: 'infer' },
+    { id: 't3', skill: 'evidence' }
+  ];
+  if (!Array.isArray(story.tasks) || story.tasks.length !== expected.length) {
+    errors.push(diagnostic('/tasks', 'diagnostic-история должна содержать ровно три задания', 'Используйте t1/find, t2/infer и t3/evidence.'));
+    return errors;
+  }
+  story.tasks.forEach((task, index) => {
+    if (task.id !== expected[index].id || task.skill !== expected[index].skill) {
+      errors.push(diagnostic(`/tasks/${index}`, `ожидалось ${expected[index].id}/${expected[index].skill}, получено ${task.id}/${task.skill}`, 'Сохраните сопоставимый порядок навыков входной и итоговой диагностики.'));
+    }
+    if (task.hints.length !== 0) {
+      errors.push(diagnostic(`/tasks/${index}/hints`, 'diagnostic-история не должна содержать hints', 'Удалите подсказки из диагностического задания.'));
+    }
+  });
+  return errors;
+}
+
 function imageIssue(story) {
   if (!story?.image?.file || typeof story.image.file !== 'string') return null;
   const publicDir = path.resolve(projectRoot, 'public');
@@ -126,7 +208,6 @@ function imageIssue(story) {
 
 export function validateStory(story, { source = 'story' } = {}) {
   const errors = [];
-  const warnings = [];
   if (!validateSchema(story)) {
     for (const error of validateSchema.errors || []) {
       errors.push(diagnostic(error.instancePath || error.schemaPath, error.message || 'не соответствует схеме', 'Сверьте структуру с docs/sauat/schema.json.', error.keyword));
@@ -134,7 +215,9 @@ export function validateStory(story, { source = 'story' } = {}) {
   }
   if (story && typeof story === 'object' && Array.isArray(story.documents) && Array.isArray(story.sources) && Array.isArray(story.tasks)) {
     errors.push(...crossValidateStory(story));
+    errors.push(...diagnosticStoryErrors(story));
   }
+  const warnings = contentWarnings(story);
   const imageDiagnostic = imageIssue(story);
   if (imageDiagnostic?.severity === 'error') errors.push(imageDiagnostic);
   if (imageDiagnostic?.severity === 'warning') warnings.push(imageDiagnostic);
@@ -172,6 +255,15 @@ export function validateContentDirectory(contentDir = defaultContentDir) {
         storyIds.set(story.id, filePath);
       }
       stories.push({ ...story, file: path.basename(filePath) });
+    }
+  }
+  const entry = stories.find((story) => /^diag_entry(?:_|$)/.test(story.id) && story.kind === 'diagnostic');
+  const exit = stories.find((story) => /^diag_exit(?:_|$)/.test(story.id) && story.kind === 'diagnostic');
+  if (entry && exit) {
+    const entrySkills = entry.tasks.map((task) => task.skill).join(',');
+    const exitSkills = exit.tasks.map((task) => task.skill).join(',');
+    if (entrySkills !== exitSkills) {
+      errors.push(diagnostic('/tasks', `diag_entry и diag_exit несопоставимы по навыкам: ${entrySkills} против ${exitSkills}`, 'Сделайте одинаковую последовательность find, infer, evidence.'));
     }
   }
   return { valid: errors.length === 0, errors, warnings, stories };

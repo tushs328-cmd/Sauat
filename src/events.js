@@ -79,14 +79,19 @@ function ratio(num, den) {
 }
 
 export function summarizeEvents(events) {
-  const firstAttempts = events.filter((event) => event.firstTry);
-  const skillsSummary = Object.fromEntries(skills.map((skill) => {
-    const rows = firstAttempts.filter((event) => event.skill === skill);
-    const num = rows.filter((event) => event.answerCorrect && (skill === 'find' || event.evidenceCorrect)).length;
-    return [skill, ratio(num, rows.length)];
-  }));
-  const diagnostic = firstAttempts.filter((event) => event.mode === 'diagnostic');
-  const mainNum = diagnostic.filter((event) => event.answerCorrect && event.evidenceCorrect && event.hintsUsed === 0).length;
-  return { skills: skillsSummary, mainMetric: ratio(mainNum, diagnostic.length), learners: new Set(events.map((event) => event.anonId)).size };
+  const diagnosticSummary = (source) => {
+    const rows = source.filter((event) => event.mode === 'diagnostic' && event.firstTry);
+    const skillsSummary = Object.fromEntries(skills.map((skill) => {
+      const skillRows = rows.filter((event) => event.skill === skill);
+      const num = skillRows.filter((event) => event.answerCorrect && event.evidenceCorrect && event.hintsUsed === 0).length;
+      return [skill, ratio(num, skillRows.length)];
+    }));
+    const mainNum = rows.filter((event) => event.answerCorrect && event.evidenceCorrect && event.hintsUsed === 0).length;
+    return { skills: skillsSummary, mainMetric: ratio(mainNum, rows.length), learners: new Set(rows.map((event) => event.anonId)).size };
+  };
+  const entry = diagnosticSummary(events.filter((event) => /^diag_entry(?:_|$)/.test(event.storyId)));
+  const exit = diagnosticSummary(events.filter((event) => /^diag_exit(?:_|$)/.test(event.storyId)));
+  const summary = diagnosticSummary(events);
+  return { ...summary, diagnostic: { entry, exit }, comparison: { entry, exit }, entryMetric: entry.mainMetric, exitMetric: exit.mainMetric };
 }
 

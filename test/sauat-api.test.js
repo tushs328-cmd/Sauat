@@ -6,6 +6,7 @@ import path from 'node:path';
 import http from 'node:http';
 import { createApp } from '../src/server.js';
 import { clearSessions, login } from '../src/auth.js';
+import { getMentorContext } from '../src/mentor.js';
 
 process.env.SAULAT_INCLUDE_FIXTURE = '1';
 
@@ -36,7 +37,12 @@ async function mockOllama(handler, callback) {
 
 before(async () => {
   dataPath = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'saulat-sauat-api-')), 'events.json');
-  server = http.createServer(createApp({ dataPath }));
+  server = http.createServer(createApp({
+    dataPath,
+    mentorContextResolver: (mentorInput) => mentorInput.storyId === 'diag_stub'
+      ? { story: { kind: 'diagnostic' }, hintIds: [], nextTaskIds: [], task: { id: mentorInput.taskId } }
+      : getMentorContext(mentorInput)
+  }));
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   base = `http://127.0.0.1:${server.address().port}`;
 });
@@ -66,7 +72,12 @@ test('INCLUDE_DRAFT включает case_001 только в dev и mentor пр
   const health = await request('/api/health');
   assert.equal(health.body.includeDraft, true);
   const manifest = await request('/content/manifest.json');
-  assert.deepEqual(manifest.body.stories.map((story) => story.id).sort(), ['case_001', 'fixture_test'].sort());
+  const manifestIds = manifest.body.stories.map((story) => story.id);
+  for (const id of ['case_001', 'case_002', 'diag_entry_001', 'diag_exit_001', 'fixture_test']) assert.ok(manifestIds.includes(id), `${id} отсутствует в manifest`);
+  assert.ok(manifest.body.stories.every((story) => story.reviewStatus && story.title));
+  const firstDiagnostic = manifest.body.stories.findIndex((story) => story.kind === 'diagnostic');
+  assert.ok(manifest.body.stories.slice(0, firstDiagnostic).every((story) => story.kind === 'practice'));
+  assert.ok(manifest.body.stories.slice(firstDiagnostic).every((story) => story.kind === 'diagnostic'));
 
   const caseStory = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'content', 'case_001.json'), 'utf8'));
   for (const task of caseStory.tasks) {
@@ -89,6 +100,14 @@ test('mentor без Ollama честно использует rules fallback', as
   assert.equal(result.response.status, 200);
   assert.equal(result.body.source, 'rules');
   assert.equal(result.body.hintId, 'h1');
+});
+
+test('mentor запрещён для diagnostic-историй', async () => {
+  const result = await request('/api/mentor', {
+    method: 'POST',
+    body: JSON.stringify({ storyId: 'diag_stub', taskId: 't1', skill: 'find', errorProfile: { answerWrong: true, evidenceWrong: false, attempt: 1, hintsUsed: 0, lastHintLevel: 0 }, lang: 'ru' })
+  });
+  assert.equal(result.response.status, 400);
 });
 
 test('mentor принимает только allowlisted structured response', async () => {
@@ -133,12 +152,26 @@ test('events deduplicate, import safely and calculate main metric', async () => 
   const event2 = { ...event, eventId: 'event-2', anonId: 'anon-b', taskId: 't2', skill: 'infer', mode: 'diagnostic', evidenceCorrect: true, mentorSource: 'rules' };
   const imported = await request('/api/teacher/import', { method: 'POST', headers: { 'x-session-token': teacher.sessionId }, body: JSON.stringify({ events: [event2] }) });
   assert.deepEqual(imported.body, { accepted: 1, duplicates: 0, rejected: 0 });
+  const entryEvent = { ...event, eventId: 'event-3', anonId: 'anon-c', storyId: 'diag_entry', answerCorrect: false, mode: 'diagnostic' };
+  const exitEvent = { ...event, eventId: 'event-4', anonId: 'anon-d', storyId: 'diag_exit', taskId: 't3', skill: 'evidence', mode: 'diagnostic' };
+  const diagnostics = await request('/api/events', { method: 'POST', body: JSON.stringify({ events: [entryEvent, exitEvent] }) });
+  assert.deepEqual(diagnostics.body, { accepted: 2, duplicates: 0, rejected: 0 });
+  const diagnosticDuplicate = await request('/api/events', { method: 'POST', body: JSON.stringify({ events: [entryEvent] }) });
+  assert.deepEqual(diagnosticDuplicate.body, { accepted: 0, duplicates: 1, rejected: 0 });
   const summary = await request('/api/teacher/summary', { headers: { 'x-session-token': teacher.sessionId } });
-  assert.equal(summary.body.mainMetric.num, 1);
-  assert.equal(summary.body.mainMetric.den, 1);
-  assert.equal(summary.body.learners, 2);
+  assert.equal(summary.body.mainMetric.num, 2);
+  assert.equal(summary.body.mainMetric.den, 3);
+  assert.equal(summary.body.skills.find.num, 0);
+  assert.equal(summary.body.skills.find.den, 1);
+  assert.equal(summary.body.skills.evidence.num, 1);
+  assert.equal(summary.body.diagnostic.entry.mainMetric.num, 0);
+  assert.equal(summary.body.diagnostic.entry.mainMetric.den, 1);
+  assert.equal(summary.body.diagnostic.entry.skills.infer.display, 'нет данных');
+  assert.equal(summary.body.diagnostic.exit.mainMetric.num, 1);
+  assert.equal(summary.body.diagnostic.exit.mainMetric.den, 1);
+  assert.equal(summary.body.learners, 3);
   const exported = await request('/api/teacher/export', { headers: { 'x-session-token': teacher.sessionId } });
-  assert.equal(exported.body.events.length, 2);
+  assert.equal(exported.body.events.length, 4);
 
   const form = new FormData();
   form.append('file', new Blob(['{ broken'], { type: 'application/json' }), 'broken.json');
@@ -147,5 +180,5 @@ test('events deduplicate, import safely and calculate main metric', async () => 
   const damagedBody = await damaged.json();
   assert.equal(damagedBody.accepted, 0);
   const after = await request('/api/teacher/summary', { headers: { 'x-session-token': teacher.sessionId } });
-  assert.equal(after.body.learners, 2);
+  assert.equal(after.body.learners, 3);
 });
