@@ -17,12 +17,13 @@
 | B01 | Аудит `src/`: что оставить, расширить хранилище под события | Codex B | S01 | DONE | commit e4518cd; 47/47 тестов (проверено Claude на копии) |
 | B02 | Валидатор историй по `schema.json` + кросс-проверки, CLI `npm run validate`, тесты | Codex B | S01 | DONE | `npm run validate` → «Контент валиден» на case_001 и fixture; тесты в test/sauat-content.test.js |
 | B03 | `content/manifest.json` генератор и статическая отдача `/content/*` | Codex B | B02 | DONE (с оговоркой) | manifest пуст, т.к. case_001 в статусе draft; нужен dev-флаг (см. B06) |
-| A01 | Каркас клиента: разбиение `public/app.js` на модули, загрузчик истории, экраны языка/карты | Codex A | S01 | TODO | — |
+| A01 | Каркас клиента: разбиение `public/app.js` на модули, загрузчик истории, экраны языка/карты | Codex A | S01 | DONE (на заглушке) | commit eea8a10; клиент открывается, онбординг и карта работают (проверено Claude в Chrome); грузит только `public/dev/fixture.json`, не `/content/manifest.json` |
 | C01 | История «Золотой человек» (RU+KK) в формате контракта с источниками | ChatGPT + владелец | S01 | DRAFT RECEIVED | `content/case_001.json` валиден по схеме; факты e1–e11 сверены Claude с 4 источниками 25.11; KK и RU остаются `draft` до человеческой проверки |
 | C00 | Тестовая заглушка `content/fixture_test.json` (`isTestFixture`) для разработки | Codex B | B02 | DONE | content/fixture_test.json, commit e4518cd |
-| B06 | Закоммитить `content/case_001.json`; валидатор проверяет существование файла `image.file`; флаг `INCLUDE_DRAFT=1` включает draft-истории в manifest только в dev (в публичный манифест draft не попадают) | Codex B | C01 | TODO | — |
-| A02 | Движок: три типа заданий, раздельная оценка ответа и доказательства, первая попытка, XP один раз | Codex A | A01,C00 | TODO | — |
-| A03 | Дорожка из 3 приключений (CSS/SVG), хук, экран раскрытия, награда-карточка | Codex A | A02 | TODO | — |
+| B06 | Закоммитить `content/case_001.json`; валидатор проверяет существование файла `image.file`; флаг `INCLUDE_DRAFT=1` включает draft-истории в manifest только в dev (в публичный манифест draft не попадают) | Codex B | C01 | DONE | commit 6f2cd00; 49/49 тестов; без флага manifest пуст, с флагом содержит case_001 (проверено Claude); предупреждение «нет assets/c01_issyk_reconstruction.svg» |
+| C01v2 | История v2: учесть исследование Science Advances 2026 (пол «скорее мужской»), правки казахского, исправленные T2 и T4 | ChatGPT + владелец | C01 | TODO | промт: `CHATGPT_C01_V2_PROMPT.md` |
+| A02 | Движок: три типа заданий, раздельная оценка ответа и доказательства, первая попытка, XP один раз | Codex A | A01,C00 | DONE (код проверен чтением) | public/js/engine.js, storage.js; ограничения: прогресс в localStorage (не IndexedDB), «+100 XP» и «4/4» зашиты в разметке |
+| A03 | Дорожка из 3 приключений (CSS/SVG), хук, экран раскрытия, награда-карточка | Codex A | A02 | PARTIAL | карта, хук, раскрытие есть; 2 из 3 узлов — заглушки; на реальной истории `case_001` не проверено |
 | A04 | IndexedDB (прогресс, события), Service Worker precache по манифесту, `offlineReady` на клиенте | Codex A | A02,B03 | TODO | — |
 | B04 | `/api/mentor` (Ollama, структурированный вывод, allowlist, таймаут, лимит, fallback по правилам) | Codex B | B01 | DONE (путь правил), ЖИВОЙ Ollama НЕ ПРОВЕРЕН | src/mentor.js, test/sauat-api.test.js; реальный вызов модели нужно проверить отдельно (задача O02) |
 | A05 | UI подсказок и три состояния ИИ | Codex A | A02,B04 | TODO | — |
