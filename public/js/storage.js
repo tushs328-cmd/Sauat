@@ -1,47 +1,139 @@
-const KEY = 'sauat-progress-v1';
-const LANG_KEY = 'sauat-lang';
-const ONBOARDING_KEY = 'sauat-onboarded';
+const DB_NAME = 'saulat-client';
+const DB_VERSION = 1;
+const PROGRESS_KEY = 'saulat-progress-v1';
+const LANG_KEY = 'saulat-lang';
+const ONBOARDING_KEY = 'saulat-onboarded';
+const EVENTS_KEY = 'saulat-events-v1';
 
 function blank() { return { schemaVersion: 1, xp: 0, tasks: {}, completedStories: [], history: [] }; }
-
-export function loadProgress() {
+function localProgress() {
   try {
-    const value = JSON.parse(localStorage.getItem(KEY) || 'null');
+    const value = JSON.parse(localStorage.getItem(PROGRESS_KEY) || 'null');
     return value && value.schemaVersion === 1 ? { ...blank(), ...value } : blank();
   } catch { return blank(); }
 }
 
-export function saveProgress(progress) { localStorage.setItem(KEY, JSON.stringify(progress)); }
+function openDb() {
+  return new Promise((resolve, reject) => {
+    if (!('indexedDB' in window)) return reject(new Error('IndexedDB недоступен'));
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains('meta')) db.createObjectStore('meta', { keyPath: 'key' });
+      if (!db.objectStoreNames.contains('progress')) db.createObjectStore('progress', { keyPath: 'key' });
+      if (!db.objectStoreNames.contains('events')) db.createObjectStore('events', { keyPath: 'eventId' });
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error || new Error('IndexedDB не открылся'));
+  });
+}
+
+function requestValue(request) {
+  return new Promise((resolve, reject) => { request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error); });
+}
+
+async function idbGet(storeName, key) {
+  const db = await openDb();
+  try { return await requestValue(db.transaction(storeName, 'readonly').objectStore(storeName).get(key)); } finally { db.close(); }
+}
+
+async function idbPut(storeName, value) {
+  const db = await openDb();
+  try { await requestValue(db.transaction(storeName, 'readwrite').objectStore(storeName).put(value)); } finally { db.close(); }
+}
+
+async function idbDelete(storeName, key) {
+  const db = await openDb();
+  try { await requestValue(db.transaction(storeName, 'readwrite').objectStore(storeName).delete(key)); } finally { db.close(); }
+}
+
+async function idbAll(storeName) {
+  const db = await openDb();
+  try { return await requestValue(db.transaction(storeName, 'readonly').objectStore(storeName).getAll()); } finally { db.close(); }
+}
+
+export async function loadProgress() {
+  try {
+    const stored = await idbGet('progress', 'state');
+    if (stored?.value) return { ...blank(), ...stored.value };
+    const migrated = localProgress();
+    await idbPut('progress', { key: 'state', value: migrated });
+    localStorage.removeItem(PROGRESS_KEY);
+    return migrated;
+  } catch { return localProgress(); }
+}
+
+export async function saveProgress(progress) {
+  try { await idbPut('progress', { key: 'state', value: progress }); localStorage.removeItem(PROGRESS_KEY); }
+  catch { localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress)); }
+}
+
 export function loadLanguage() { return localStorage.getItem(LANG_KEY) === 'kk' ? 'kk' : 'ru'; }
 export function saveLanguage(lang) { localStorage.setItem(LANG_KEY, lang); }
 export function hasOnboarded() { return localStorage.getItem(ONBOARDING_KEY) === '1'; }
 export function finishOnboarding() { localStorage.setItem(ONBOARDING_KEY, '1'); }
 
 export function taskProgress(progress, storyId, taskId) {
-  return progress.tasks[`${storyId}:${taskId}`] || { attempts: 0, hintsUsed: 0, firstTry: null, xpAwarded: false, solved: false };
+  return progress.tasks[`${storyId}:${taskId}`] || { attempts: 0, hintsUsed: 0, firstTry: null, xpAwarded: false, xpEarned: 0, solved: false };
 }
 
-export function recordAttempt(progress, story, task, result) {
+export async function recordAttempt(progress, story, task, result) {
   const key = `${story.id}:${task.id}`;
   const previous = taskProgress(progress, story.id, task.id);
   const isFirstAttempt = previous.attempts === 0;
-  const entry = { ...previous, attempts: previous.attempts + 1, firstTry: previous.firstTry ?? { ...result }, solved: previous.solved || result.complete };
-  if (result.complete && !entry.xpAwarded) { entry.xpAwarded = true; progress.xp += 25; }
+  const earnedBefore = Number(previous.xpEarned || (previous.xpAwarded ? 25 : 0));
+  const earnedNow = result.complete && !previous.xpAwarded ? 25 : 0;
+  const entry = { ...previous, attempts: previous.attempts + 1, firstTry: previous.firstTry ?? { ...result }, solved: previous.solved || result.complete, xpAwarded: previous.xpAwarded || earnedNow > 0, xpEarned: earnedBefore + earnedNow };
+  progress.xp += earnedNow;
   progress.tasks[key] = entry;
   progress.history.push({ storyId: story.id, taskId: task.id, ...result, hintsUsed: entry.hintsUsed, firstTry: isFirstAttempt, ts: new Date().toISOString() });
   const solved = story.tasks.every((item) => taskProgress(progress, story.id, item.id).solved);
   if (solved && !progress.completedStories.includes(story.id)) progress.completedStories.push(story.id);
-  saveProgress(progress);
-  return entry;
+  await saveProgress(progress);
+  return { ...entry, isFirstAttempt };
 }
 
-export function recordHint(progress, storyId, taskId) {
+export async function recordHint(progress, storyId, taskId) {
   const key = `${storyId}:${taskId}`;
   const entry = taskProgress(progress, storyId, taskId);
   const next = { ...entry, hintsUsed: Math.min(entry.hintsUsed + 1, 3) };
   progress.tasks[key] = next;
-  saveProgress(progress);
+  await saveProgress(progress);
   return next;
 }
 
-export function resetProgress() { localStorage.removeItem(KEY); localStorage.removeItem(ONBOARDING_KEY); }
+export async function getAnonId() {
+  try {
+    const stored = await idbGet('meta', 'anonId');
+    if (stored?.value) return stored.value;
+    const value = globalThis.crypto?.randomUUID?.() || `local-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    await idbPut('meta', { key: 'anonId', value });
+    return value;
+  } catch { return 'local-anonymous'; }
+}
+
+export async function queueEvent(event) {
+  try { await idbPut('events', event); }
+  catch {
+    const events = JSON.parse(localStorage.getItem(EVENTS_KEY) || '[]');
+    if (!events.some((item) => item.eventId === event.eventId)) localStorage.setItem(EVENTS_KEY, JSON.stringify([...events, event]));
+  }
+}
+
+export async function flushEvents() {
+  if (!navigator.onLine) return { sent: 0 };
+  let events;
+  try { events = await idbAll('events'); } catch { events = JSON.parse(localStorage.getItem(EVENTS_KEY) || '[]'); }
+  if (!events.length) return { sent: 0 };
+  const response = await fetch('/api/events', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ events: events.slice(0, 500) }), signal: AbortSignal.timeout(3500) });
+  if (!response.ok) throw new Error(`events HTTP ${response.status}`);
+  for (const event of events.slice(0, 500)) { try { await idbDelete('events', event.eventId); } catch { /* local fallback is best effort */ } }
+  localStorage.removeItem(EVENTS_KEY);
+  return response.json();
+}
+
+export async function resetProgress() {
+  try { await idbDelete('progress', 'state'); } catch { /* fallback below */ }
+  try { const events = await idbAll('events'); for (const event of events) await idbDelete('events', event.eventId); } catch { /* fallback below */ }
+  localStorage.removeItem(PROGRESS_KEY); localStorage.removeItem(EVENTS_KEY); localStorage.removeItem(ONBOARDING_KEY);
+}

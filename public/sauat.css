@@ -13,3 +13,21 @@
 .error-page { text-align:center; padding-top:15vh; } @media (max-width:780px) { .page, .topbar { width:min(100% - 28px, 680px); } .onboarding { display:block; padding-top:22px; } .onboarding-art { min-height:240px; height:32vh; max-height:330px; border-radius:28px; margin-bottom:30px; } .mountain { border-left-width:150px; border-right-width:150px; border-bottom-width:210px; } .artifact-seal { width:65px; height:65px; font-size:26px; left:42%; top:39%; border-width:6px; } .sun { width:80px; height:80px; } .hero-card { padding:24px; } .hero-illustration { width:150px; min-width:130px; } .hero-card-shape { width:90px; height:100px; font-size:38px; border-width:7px; } .hero-orbit { width:140px; height:140px; } .adventure-track { grid-template-columns:1fr; gap:10px; } .node-line { display:none; } .node-body { min-height:0; } .story-hero { align-items:flex-start; } .story-stamp { width:75px; height:75px; font-size:25px; border-width:5px; } .story-stamp span { font-size:6px; } }
 @media (max-width:520px) { .page { padding-top:23px; } .topbar { min-height:70px; } .brand small, .xp-pill { display:none; } .top-actions { gap:4px; } .icon-button span { display:none; } .map-heading { align-items:flex-start; } .progress-chip { margin-top:8px; } .hero-card { min-height:0; display:block; } .hero-illustration { height:135px; width:100%; } .hero-illustration small { bottom:0; } .hero-card-shape { position:absolute; top:0; } .story-hero { display:block; } .story-stamp { margin:20px 0 0; } .task-card { margin-top:27px; } .museum-card { align-items:flex-start; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior:auto !important; transition-duration:.01ms !important; animation-duration:.01ms !important; } }
+.offline-status { display:inline-flex; align-items:center; gap:7px; min-height:32px; padding:0 10px; border:1px solid #e5d9b5; border-radius:999px; color:#7b6a38; background:#fff9e6; font-size:11px; font-weight:750; white-space:nowrap; }
+.offline-status.ready { color:#21634f; border-color:#a8d6c5; background:#e8f7f0; }
+.offline-status .status-dot { width:7px; height:7px; background:#d3a528; }
+.offline-status.ready .status-dot { background:#168d83; }
+.story-image, .hero-image, .reveal-image { margin:0; position:relative; }
+.story-image { width:min(260px, 33vw); flex:0 0 auto; }
+.story-image img, .hero-image img, .reveal-image img { display:block; width:100%; height:auto; border-radius:22px; border:1px solid rgba(32,60,56,.15); box-shadow:0 12px 28px rgba(32,60,56,.15); }
+.story-image figcaption, .hero-image figcaption, .reveal-image figcaption { color:var(--muted); font-size:10px; letter-spacing:.08em; text-transform:uppercase; margin-top:7px; text-align:center; }
+.hero-image { width:230px; min-width:180px; align-self:center; }
+.hero-image img { border-color:rgba(255,253,247,.25); }
+.hero-image figcaption { color:#e8d8a7; }
+.reveal-image { width:min(420px, 80vw); margin:0 auto 18px; z-index:2; }
+.reveal-image figcaption { color:#75652f; }
+.mentor-state { display:inline-flex; align-items:center; gap:7px; width:max-content; border-radius:999px; padding:5px 9px; margin-bottom:8px; font-size:10px; font-weight:850; text-transform:uppercase; letter-spacing:.06em; color:var(--teal-dark); background:#dff0e9; }
+.mentor-state.offline { color:#7e5a22; background:#fff2cc; }
+.mentor-state.ai { color:#5d438f; background:#eee5ff; }
+.hint-box .mentor-state + .hint-level { display:block; }
+@media (max-width:780px) { .offline-status { font-size:0; padding:0 8px; gap:0; } .offline-status .status-dot { width:8px; height:8px; } .story-image { width:100%; max-width:280px; margin-top:18px; } .story-hero .story-image { margin-left:0; } .hero-image { width:100%; max-width:230px; margin:22px auto 0; } }
