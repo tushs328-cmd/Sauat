@@ -2,89 +2,124 @@ import { dictionary } from './i18n/index.js';
 import { loadContent } from './content.js';
 import { evaluateTask, nextHint, taskLabel } from './engine.js';
 import { prepareOffline } from './offline.js';
-import { finishOnboarding, flushEvents, getAnonId, hasOnboarded, loadLanguage, loadProgress, queueEvent, recordAttempt, recordHint, resetProgress, saveLanguage, taskProgress } from './storage.js';
+import { exportEvents, finishOnboarding, flushEvents, getAnonId, hasOnboarded, importTeacherEvents, loadLanguage, loadProgress, loadTeacherEvents, queueEvent, recordAttempt, recordHint, resetProgress, saveLanguage, taskProgress } from './storage.js';
 
+const devMode = new URLSearchParams(location.search).get('dev') === '1';
 const state = {
   lang: loadLanguage(), view: hasOnboarded() ? 'map' : 'onboarding', stories: [], story: null, manifest: null,
   taskIndex: 0, selectedOptions: [], selectedEvidence: [], feedback: null, hint: null, mentorState: 'none', mentorSource: 'none',
-  progress: { schemaVersion: 1, xp: 0, tasks: {}, completedStories: [], history: [] }, offlineReady: false, offlineState: 'checking'
+  progress: { schemaVersion: 1, xp: 0, tasks: {}, completedStories: [], history: [] }, teacherEvents: [], importMessage: '', offlineReady: false, offlineState: 'checking'
 };
 const app = document.querySelector('#app');
 const t = (key) => dictionary(state.lang)[key] || dictionary('ru')[key] || key;
 const text = (value) => value?.[state.lang] || value?.ru || '';
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char]));
 const icon = (name) => ({ compass: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m13.6 5.1-2.7 6-6 2.7 6 2.6 2.7 6 2.6-6 6-2.6-6-2.7-2.6-6Z"/><circle cx="13.6" cy="13.8" r="1.5"/></svg>', lock: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="10" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>' }[name] || '');
+const practiceStories = () => state.stories.filter((story) => story.kind === 'practice');
+const diagnosticStories = () => state.stories.filter((story) => story.kind === 'diagnostic');
+const heroStory = () => practiceStories()[0] || diagnosticStories()[0] || state.story;
+const practiceComplete = () => practiceStories().length > 0 && practiceStories().every((story) => state.progress.completedStories.includes(story.id));
 
 function header({ back = false } = {}) {
   const offlineLabel = state.offlineReady ? t('offlineReady') : state.offlineState === 'error' ? t('offlineNotReady') : t('offlineChecking');
-  return `<header class="topbar"><button class="brand" data-action="map" type="button" aria-label="SAUAT"><span class="brand-mark">S</span><span><strong>SAUAT</strong><small>${esc(t('slogan'))}</small></span></button><div class="top-actions">${back ? `<button class="icon-button" data-action="map" type="button">← <span>${esc(t('back'))}</span></button>` : ''}<span class="offline-status ${state.offlineReady ? 'ready' : ''}"><span class="status-dot"></span>${esc(offlineLabel)}</span><span class="xp-pill"><span class="xp-star">XP</span> ${state.progress.xp}</span><button class="language-toggle" data-action="toggle-lang" type="button">${esc(dictionary(state.lang).other)}</button></div></header>`;
+  const hideXp = state.view === 'results' || state.story?.kind === 'diagnostic';
+  return `<header class="topbar"><button class="brand" data-action="map" type="button" aria-label="SAUAT"><span class="brand-mark">S</span><span><strong>SAUAT</strong><small>${esc(t('slogan'))}</small></span></button><div class="top-actions">${back ? `<button class="icon-button" data-action="map" type="button">← <span>${esc(t('back'))}</span></button>` : ''}<span class="offline-status ${state.offlineReady ? 'ready' : ''}"><span class="status-dot"></span>${esc(offlineLabel)}</span>${hideXp ? '' : `<span class="xp-pill"><span class="xp-star">XP</span> ${state.progress.xp}</span>`}<button class="language-toggle" data-action="toggle-lang" type="button">${esc(dictionary(state.lang).other)}</button></div></header>`;
 }
 
 function storyBadge(story) { return story?.isTestFixture ? `<span class="tag sand">${esc(t('testBadge'))}</span>` : ''; }
 function storyImage(story, className = 'story-image') {
-  if (!story?.image?.file) return '';
-  const file = String(story.image.file).replace(/^\/+/, '');
-  return `<figure class="${className}"><img src="/${esc(file)}" alt="${esc(text(story.image.alt))}"><figcaption>${story.image.isReconstruction ? 'Реконструкция · SAUAT' : esc(story.image.credit || '')}</figcaption></figure>`;
+  const image = story?.image;
+  const file = image?.file ? String(image.file).replace(/^\/+/, '') : '';
+  const src = file && !/^https?:\/\//i.test(file) ? `/${file}` : file;
+  const alt = text(image?.alt) || t('reconstructionFallback');
+  const caption = image?.isReconstruction ? t('reconstruction') : image?.credit || t('reconstructionFallback');
+  return `<figure class="${className}">${src ? `<img src="${esc(src)}" alt="${esc(alt)}">` : ''}<div class="story-placeholder"${src ? ' hidden' : ''}><span aria-hidden="true">◇</span><strong>${esc(t('reconstruction'))}</strong><small>${esc(t('reconstructionFallback'))}</small></div><figcaption>${esc(caption)}</figcaption></figure>`;
 }
 function reviewBanner(story) {
-  const notices = [];
-  if (story?.reviewStatus?.[state.lang] !== 'approved') notices.push(`${t('review')} · ${story?.reviewStatus?.[state.lang] || 'draft'}`);
-  if (story?.isTestFixture) notices.push(t('fixtureNotice'));
-  return notices.length ? `<div class="notice review-notice"><span class="status-dot"></span><span>${esc(notices.join(' · '))}</span></div>` : '';
+  const status = story?.reviewStatus?.[state.lang];
+  return status && status !== 'approved' ? `<div class="notice review-notice"><span class="status-dot"></span><span>${esc(t('review'))} · ${esc(status)}</span></div>` : '';
 }
 function taskTotals(story) {
   const total = story?.tasks?.length || 0;
   const solved = story?.tasks?.filter((task) => taskProgress(state.progress, story.id, task.id).solved).length || 0;
-  const xp = story?.tasks?.reduce((sum, task) => sum + Number(taskProgress(state.progress, story.id, task.id).xpEarned || 0), 0) || 0;
+  const xp = story?.kind === 'practice' ? story.tasks.reduce((sum, task) => sum + Number(taskProgress(state.progress, story.id, task.id).xpEarned || 0), 0) : 0;
   return { total, solved, xp };
 }
+function storyUnlocked(story) {
+  if (!story) return false;
+  if (devMode) return true;
+  if (story.kind === 'practice') {
+    const list = practiceStories();
+    const index = list.findIndex((item) => item.id === story.id);
+    return index <= 0 || state.progress.completedStories.includes(list[index - 1]?.id);
+  }
+  const list = diagnosticStories();
+  const index = list.findIndex((item) => item.id === story.id);
+  if (index === 0) return true;
+  return practiceComplete() && (index <= 1 || state.progress.completedStories.includes(list[index - 1]?.id));
+}
 function render() {
-  if (!state.story && state.view !== 'onboarding') state.view = 'map';
-  app.innerHTML = state.view === 'onboarding' ? onboarding() : state.view === 'map' ? map() : state.view === 'story' ? storyIntro() : state.view === 'task' ? taskScreen() : reveal();
+  if (!state.story && state.view !== 'onboarding' && state.view !== 'results') state.view = 'map';
+  app.innerHTML = state.view === 'onboarding' ? onboarding() : state.view === 'map' ? map() : state.view === 'story' ? storyIntro() : state.view === 'task' ? taskScreen() : state.view === 'reveal' ? reveal() : state.view === 'diagnostic-complete' ? diagnosticComplete() : results();
   bind();
+  document.querySelectorAll('.story-image img, .hero-image img, .reveal-image img').forEach((image) => image.addEventListener('error', () => { image.hidden = true; image.parentElement.classList.add('missing'); image.parentElement.querySelector('.story-placeholder')?.removeAttribute('hidden'); }));
 }
 
 function onboarding() {
-  return `<div class="page onboarding"><div class="onboarding-art" aria-label="${esc(state.lang === 'ru' ? 'Реконструкция карты экспедиции' : 'Экспедиция картасының реконструкциясы')}"><div class="sun"></div><div class="mountain mountain-one"></div><div class="mountain mountain-two"></div><div class="route route-one"></div><div class="route route-two"></div><div class="artifact-seal">S</div></div><div class="onboarding-copy"><div class="eyebrow">${esc(t('eyebrow'))}</div><h1>SAUAT</h1><p class="display-title">${esc(t('slogan'))}</p><p class="lead">${esc(t('intro'))}</p><div class="reconstruction-label">Реконструкция · SAUAT</div><section class="language-card"><h2>${esc(t('chooseLang'))}</h2><div class="lang-options"><button class="lang-choice ${state.lang === 'ru' ? 'selected' : ''}" data-lang="ru" type="button"><span>РУ</span>Русский</button><button class="lang-choice ${state.lang === 'kk' ? 'selected' : ''}" data-lang="kk" type="button"><span>ҚАЗ</span>Қазақша</button></div><p>${esc(t('languageNote'))}</p></section><button class="primary-button wide" data-action="onboard" type="button">${esc(t('start'))} <span aria-hidden="true">→</span></button></div></div>`;
+  return `<div class="page onboarding"><div class="onboarding-art" aria-label="${esc(state.lang === 'ru' ? 'Реконструкция карты экспедиции' : 'Экспедиция картасының реконструкциясы')}"><div class="sun"></div><div class="mountain mountain-one"></div><div class="mountain mountain-two"></div><div class="route route-one"></div><div class="route route-two"></div><div class="artifact-seal">S</div></div><div class="onboarding-copy"><div class="eyebrow">${esc(t('eyebrow'))}</div><h1>SAUAT</h1><p class="display-title">${esc(t('slogan'))}</p><p class="lead">${esc(t('intro'))}</p><div class="reconstruction-label">${esc(t('reconstruction'))} · SAUAT</div><section class="language-card"><h2>${esc(t('chooseLang'))}</h2><div class="lang-options"><button class="lang-choice ${state.lang === 'ru' ? 'selected' : ''}" data-lang="ru" type="button"><span>РУ</span>Русский</button><button class="lang-choice ${state.lang === 'kk' ? 'selected' : ''}" data-lang="kk" type="button"><span>ҚАЗ</span>Қазақша</button></div><p>${esc(t('languageNote'))}</p></section><button class="primary-button wide" data-action="onboard" type="button">${esc(t('start'))} <span aria-hidden="true">→</span></button></div></div>`;
 }
 
+function practiceNode(story, index, list) {
+  const unlocked = storyUnlocked(story); const totals = taskTotals(story);
+  const action = unlocked ? `<button class="node-open" data-action="open-story" data-story="${esc(story.id)}" type="button" aria-label="${esc(text(story.title))}">${icon('compass')}</button>` : `<span class="node-open locked-icon">${icon('lock')}</span>`;
+  return `<article class="adventure-node ${unlocked ? 'active' : 'locked'}"><div class="node-number">${String(index + 1).padStart(2, '0')}</div>${index < list.length - 1 ? '<div class="node-line"></div>' : ''}<div class="node-body">${action}<div><span class="tag ${unlocked ? 'gold' : 'muted-tag'}">${esc(unlocked ? t('unlocked') : t('locked'))}</span><h3>${esc(text(story.title))}</h3><p>${totals.solved}/${totals.total} ${esc(t('missions'))} · ${totals.xp} ${esc(t('xp'))}</p></div></div></article>`;
+}
+function diagnosticCard(story, index, list) {
+  const unlocked = storyUnlocked(story); const label = index === 0 ? t('diagnosticEntry') : index === list.length - 1 ? t('diagnosticExit') : `${t('diagnostic')} ${index + 1}`; const totals = taskTotals(story);
+  return `<article class="diagnostic-card ${unlocked ? 'active' : 'locked'}"><div class="diagnostic-card-top"><span class="tag ${unlocked ? 'teal' : 'muted-tag'}">${esc(unlocked ? t('unlocked') : t('locked'))}</span><span class="diagnostic-label">${esc(label)}</span></div><h3>${esc(text(story.title))}</h3><p>${esc(text(story.hook))}</p><small>${totals.solved}/${totals.total} ${esc(t('diagnosticTasks'))}</small>${unlocked ? `<button class="secondary-button" data-action="open-story" data-story="${esc(story.id)}" type="button">${esc(t('openDiagnostic'))} →</button>` : ''}</article>`;
+}
 function map() {
-  const totals = taskTotals(state.story);
-  const storyCount = Math.max(1, state.stories.length);
-  const realNodes = state.stories.slice(0, 3).map((story, index) => {
-    const storyTotals = taskTotals(story);
-    const unlocked = index === 0 || state.progress.completedStories.includes(state.stories[index - 1]?.id);
-    return `<article class="adventure-node ${unlocked ? 'active' : 'locked'}"><div class="node-number">${String(index + 1).padStart(2, '0')}</div>${index < Math.min(3, state.stories.length) - 1 ? '<div class="node-line"></div>' : ''}<div class="node-body"><div class="node-icon">${icon(unlocked ? 'compass' : 'lock')}</div><div><span class="tag ${unlocked ? 'gold' : 'muted-tag'}">${esc(unlocked ? t('unlocked') : t('locked'))}</span><h3>${esc(text(story.title))}</h3><p>${storyTotals.solved}/${storyTotals.total} ${esc(t('missions'))} · ${storyTotals.xp} ${esc(t('xp'))}</p></div></div></article>`;
-  });
-  while (realNodes.length < 3) {
-    const index = realNodes.length;
-    realNodes.push(`<article class="adventure-node locked"><div class="node-number">${String(index + 1).padStart(2, '0')}</div>${index < 2 ? '<div class="node-line"></div>' : ''}<div class="node-body"><div class="node-icon">${icon('lock')}</div><div><span class="tag muted-tag">${esc(t('locked'))}</span><h3>${esc(index === 1 ? (state.lang === 'ru' ? 'Следующая история' : 'Келесі тарих') : (state.lang === 'ru' ? 'Новая экспедиция' : 'Жаңа экспедиция'))}</h3><p>${esc(state.lang === 'ru' ? 'Откроется после проверки' : 'Тексеруден кейін ашылады')}</p></div></div></article>`);
-  }
-  const done = state.progress.completedStories.includes(state.story?.id);
-  return `<div class="app-shell">${header()}<main class="page map-page" id="main"><div class="map-heading"><div><div class="eyebrow">${esc(t('map'))}</div><h1>${esc(text(state.story.title))}</h1><p>${esc(t('mapIntro'))}</p></div><div class="progress-chip"><strong>${totals.solved}/${totals.total}</strong><span>${esc(t('missions'))}</span></div></div>${reviewBanner(state.story)}<section class="hero-card"><div class="hero-copy"><span class="tag teal">${esc(t('unlocked'))}</span><h2>${esc(text(state.story.title))}</h2><p>${esc(text(state.story.hook))}</p><button class="primary-button" data-action="open-story" data-story="${esc(state.story.id)}" type="button">${esc(done ? t('continue') : t('start'))} <span aria-hidden="true">→</span></button></div>${storyImage(state.story, 'hero-image')}</section><section class="section-heading"><div><div class="eyebrow">${esc(t('adventure'))}</div><h2>${esc(t('map'))}</h2></div><span class="muted">1/${storyCount}</span></section><div class="adventure-track">${realNodes.join('')}</div><section class="museum-card"><div class="museum-icon">◆</div><div><div class="eyebrow">${esc(t('museum'))}</div><h2>${esc(done ? text(state.story.reward.title) : (state.lang === 'ru' ? 'Коллекция пока ждёт' : 'Жинақ күтіп тұр'))}</h2><p>${esc(done ? text(state.story.reward.text) : (state.lang === 'ru' ? 'Заверши первое приключение, чтобы открыть артефакт.' : 'Артефактты ашу үшін бірінші приключениені аяқта.'))}</p></div></section><button class="text-button reset-button" data-action="reset" type="button">${esc(t('reset'))}</button></main></div>`;
+  const practices = practiceStories(); const diagnostics = diagnosticStories(); const focus = heroStory(); const focusTotals = taskTotals(focus); const done = focus && state.progress.completedStories.includes(focus.id);
+  return `<div class="app-shell">${header()}<main class="page map-page" id="main"><div class="map-heading"><div><div class="eyebrow">${esc(t('map'))}</div><h1>${esc(text(focus?.title))}</h1><p>${esc(t('mapIntro'))}</p></div><div class="progress-chip"><strong>${focusTotals.solved}/${focusTotals.total}</strong><span>${esc(focus?.kind === 'diagnostic' ? t('diagnosticTasks') : t('missions'))}</span></div></div>${reviewBanner(focus)}${focus ? `<section class="hero-card"><div class="hero-copy"><span class="tag teal">${esc(focus.kind === 'diagnostic' ? t('diagnostic') : t('unlocked'))}</span>${storyBadge(focus)}<h2>${esc(text(focus.title))}</h2><p>${esc(text(focus.hook))}</p>${storyUnlocked(focus) ? `<button class="primary-button" data-action="open-story" data-story="${esc(focus.id)}" type="button">${esc(done ? t('continue') : t('start'))} <span aria-hidden="true">→</span></button>` : ''}</div>${storyImage(focus, 'hero-image')}</section>` : ''}${practices.length ? `<section class="section-heading"><div><div class="eyebrow">${esc(t('adventure'))}</div><h2>${esc(t('practiceStories'))}</h2></div><span class="muted">${practices.length}</span></section><div class="adventure-track">${practices.map((story, index) => practiceNode(story, index, practices)).join('')}</div>` : ''}${diagnostics.length ? `<section class="diagnostic-section"><div class="section-heading"><div><div class="eyebrow">${esc(t('assessment'))}</div><h2>${esc(t('diagnostic'))}</h2></div><span class="muted">${diagnostics.length}</span></div><div class="diagnostic-grid">${diagnostics.map((story, index) => diagnosticCard(story, index, diagnostics)).join('')}</div></section>` : ''}<section class="teacher-actions"><button class="secondary-button" data-action="export" type="button">${esc(t('exportResults'))}</button><button class="text-button" data-action="results" type="button">${esc(t('results'))}</button></section><button class="text-button reset-button" data-action="reset" type="button">${esc(t('reset'))}</button></main></div>`;
 }
 
 function storyIntro() {
-  return `<div class="app-shell">${header({ back: true })}<main class="page story-page" id="main"><div class="story-hero"><div><span class="tag teal">${esc(t('hook'))}</span>${storyBadge(state.story)}<h1>${esc(text(state.story.title))}</h1><p class="story-hook">${esc(text(state.story.hook))}</p></div>${storyImage(state.story, 'story-image')}</div>${reviewBanner(state.story)}<section class="document-section"><div class="section-heading"><div><div class="eyebrow">${esc(t('documents'))}</div><h2>${esc(t('read'))}</h2></div><span class="progress-chip">${state.story.documents.length} ${esc(t('document'))}</span></div><div class="documents">${state.story.documents.map((doc) => `<article class="document-card"><div class="document-top"><span class="doc-id">${esc(doc.id.toUpperCase())}</span>${storyBadge(state.story)}</div><h3>${esc(text(doc.title))}</h3><div class="segments">${doc.segments.map((segment) => `<div class="segment"><span class="segment-id">${esc(segment.id)}</span><p>${esc(text(segment.text))}</p></div>`).join('')}</div></article>`).join('')}</div></section><button class="primary-button wide" data-action="start-tasks" type="button">${esc(t('beginTasks'))} <span aria-hidden="true">→</span></button></main></div>`;
+  const diagnostic = state.story.kind === 'diagnostic';
+  return `<div class="app-shell">${header({ back: true })}<main class="page story-page" id="main"><div class="story-hero"><div><span class="tag teal">${esc(diagnostic ? t('diagnostic') : t('hook'))}</span>${storyBadge(state.story)}<h1>${esc(text(state.story.title))}</h1><p class="story-hook">${esc(text(state.story.hook))}</p></div>${storyImage(state.story, 'story-image')}</div>${reviewBanner(state.story)}<section class="document-section"><div class="section-heading"><div><div class="eyebrow">${esc(t('documents'))}</div><h2>${esc(t('read'))}</h2></div><span class="progress-chip">${state.story.documents.length} ${esc(t('document'))}</span></div><div class="documents">${state.story.documents.map((doc) => `<article class="document-card"><div class="document-top"><span class="doc-id">${esc(doc.id.toUpperCase())}</span>${storyBadge(state.story)}</div><h3>${esc(text(doc.title))}</h3><div class="segments">${doc.segments.map((segment) => `<div class="segment"><span class="segment-id">${esc(segment.id)}</span><p>${esc(text(segment.text))}</p></div>`).join('')}</div></article>`).join('')}</div></section><button class="primary-button wide" data-action="start-tasks" type="button">${esc(diagnostic ? t('beginDiagnostic') : t('beginTasks'))} <span aria-hidden="true">→</span></button></main></div>`;
 }
-
-function mentorBadge() {
-  const label = state.mentorState === 'ai' ? t('mentorAi') : state.mentorState === 'offline' ? t('mentorOffline') : t('mentorRules');
-  return `<span class="mentor-state ${state.mentorState}"><span class="status-dot"></span>${esc(label)}</span>`;
+function evidenceGroups(story, selected) {
+  return story.documents.map((doc) => `<section class="evidence-group"><h3>${esc(text(doc.title) || doc.id.toUpperCase())}</h3><div class="evidence-grid">${doc.segments.map((segment) => `<button class="evidence-choice ${selected.includes(segment.id) ? 'selected' : ''}" data-evidence="${esc(segment.id)}" type="button" aria-pressed="${selected.includes(segment.id)}"><span class="segment-id">${esc(segment.id)}</span><span>${esc(text(segment.text))}</span></button>`).join('')}</div></section>`).join('');
 }
-
+function mentorBadge() { const label = state.mentorState === 'ai' ? t('mentorAi') : state.mentorState === 'offline' ? t('mentorOffline') : t('mentorRules'); return `<span class="mentor-state ${state.mentorState}"><span class="status-dot"></span>${esc(label)}</span>`; }
 function taskScreen() {
-  const task = state.story.tasks[state.taskIndex];
-  const progress = taskProgress(state.progress, state.story.id, task.id);
-  const evidence = state.story.documents.flatMap((doc) => doc.segments);
+  const task = state.story.tasks[state.taskIndex]; const diagnostic = state.story.kind === 'diagnostic'; const progress = taskProgress(state.progress, state.story.id, task.id);
   const feedback = state.feedback ? `<div class="feedback ${state.feedback.complete ? 'success' : state.feedback.answerCorrect ? 'partial' : 'error'}" role="status"><strong>${esc(state.feedback.complete ? t('correct') : state.feedback.answerCorrect ? t('partial') : t('wrong'))}</strong><div class="feedback-grid"><span>${esc(t('answerCorrect'))}: ${state.feedback.answerCorrect ? '✓' : '×'}</span><span>${esc(t('evidenceCorrect'))}: ${state.feedback.evidenceCorrect ? '✓' : task.requireEvidence ? '×' : '—'}</span></div>${progress.firstTry ? `<small>${esc(t('firstSaved'))}</small>` : ''}</div>` : '';
-  const hint = state.hint ? `<div class="hint-box">${mentorBadge()}<span class="hint-level">${esc(t('hintLevel'))} ${state.hint.level}</span><p>${esc(text(state.hint.text))}</p><small>${esc(state.mentorState === 'offline' ? t('mentorOffline') : state.mentorState === 'ai' ? t('mentorAi') : t('mentorRules'))}</small></div>` : '';
-  return `<div class="app-shell">${header({ back: true })}<main class="page task-page" id="main"><div class="task-progress"><button class="back-link" data-action="story" type="button">← ${esc(t('documents'))}</button><span>${state.taskIndex + 1}/${state.story.tasks.length}</span></div><div class="progress-bar"><i style="width:${((state.taskIndex + 1) / state.story.tasks.length) * 100}%"></i></div><section class="task-card"><div class="task-heading"><span class="tag teal">${esc(taskLabel(task, dictionary(state.lang)))}</span>${storyBadge(state.story)}</div><h1>${esc(text(task.question))}</h1>${task.claim ? `<blockquote class="claim">«${esc(text(task.claim.text))}»</blockquote>` : ''}<fieldset class="answer-fieldset"><legend>${esc(t('answer'))}</legend><div class="option-grid">${task.options.map((option) => `<button class="choice ${state.selectedOptions.includes(option.id) ? 'selected' : ''}" data-option="${esc(option.id)}" type="button" aria-pressed="${state.selectedOptions.includes(option.id)}"><span class="choice-marker">${esc(option.id.toUpperCase())}</span><span>${esc(text(option.text))}</span></button>`).join('')}</div></fieldset>${task.requireEvidence ? `<fieldset class="evidence-fieldset"><legend>${esc(t('evidence'))}</legend><p class="helper">${esc(t('chooseEvidence'))}</p><div class="evidence-grid">${evidence.map((segment) => `<button class="evidence-choice ${state.selectedEvidence.includes(segment.id) ? 'selected' : ''}" data-evidence="${esc(segment.id)}" type="button" aria-pressed="${state.selectedEvidence.includes(segment.id)}"><span class="segment-id">${esc(segment.id)}</span><span>${esc(text(segment.text))}</span></button>`).join('')}</div></fieldset>` : ''}${feedback}${hint}<div class="task-actions">${state.feedback?.complete ? `<button class="primary-button wide" data-action="advance" type="button">${state.taskIndex === state.story.tasks.length - 1 ? esc(t('reveal')) : esc(t('nextTask'))} <span aria-hidden="true">→</span></button>` : `<button class="primary-button wide" data-action="submit" type="button">${esc(t('check'))}</button>`}${!state.feedback?.complete && state.feedback && progress.hintsUsed < 3 ? `<button class="secondary-button wide" data-action="hint" type="button">${esc(t('hintNext'))} · ${progress.hintsUsed + 1}</button>` : ''}</div></section></main></div>`;
+  const explanation = diagnostic && state.feedback ? `<div class="explanation"><span class="eyebrow">${esc(t('explanation'))}</span><p>${esc(text(task.explanation))}</p></div>` : '';
+  const hint = !diagnostic && state.hint ? `<div class="hint-box">${mentorBadge()}<span class="hint-level">${esc(t('hintLevel'))} ${state.hint.level}</span><p>${esc(text(state.hint.text))}</p><small>${esc(state.mentorState === 'offline' ? t('mentorOffline') : state.mentorState === 'ai' ? t('mentorAi') : t('mentorRules'))}</small></div>` : '';
+  const action = state.feedback ? `<button class="primary-button wide" data-action="advance" type="button">${esc(state.taskIndex === state.story.tasks.length - 1 ? (diagnostic ? t('finishDiagnostic') : t('reveal')) : t('nextTask'))} <span aria-hidden="true">→</span></button>` : `<button class="primary-button wide" data-action="submit" type="button">${esc(t('check'))}</button>`;
+  const hintButton = !diagnostic && !state.feedback?.complete && state.feedback && progress.hintsUsed < 3 ? `<button class="secondary-button wide" data-action="hint" type="button">${esc(t('hintNext'))} · ${progress.hintsUsed + 1}</button>` : '';
+  return `<div class="app-shell">${header({ back: true })}<main class="page task-page" id="main"><div class="task-progress"><button class="back-link" data-action="story" type="button">← ${esc(t('documents'))}</button><span>${state.taskIndex + 1}/${state.story.tasks.length}</span></div><div class="progress-bar"><i style="width:${((state.taskIndex + 1) / state.story.tasks.length) * 100}%"></i></div><section class="task-card"><div class="task-heading"><span class="tag teal">${esc(taskLabel(task, dictionary(state.lang)))}</span>${storyBadge(state.story)}${diagnostic ? `<span class="tag sand">${esc(t('diagnosticNoHints'))}</span>` : ''}</div><h1>${esc(text(task.question))}</h1>${task.claim ? `<blockquote class="claim">«${esc(text(task.claim.text))}»</blockquote>` : ''}<fieldset class="answer-fieldset"><legend>${esc(t('answer'))}</legend><div class="option-grid">${task.options.map((option) => `<button class="choice ${state.selectedOptions.includes(option.id) ? 'selected' : ''}" data-option="${esc(option.id)}" type="button" aria-pressed="${state.selectedOptions.includes(option.id)}"><span class="choice-marker">${esc(option.id.toUpperCase())}</span><span>${esc(text(option.text))}</span></button>`).join('')}</div></fieldset>${task.requireEvidence ? `<fieldset class="evidence-fieldset"><legend>${esc(t('evidence'))}</legend><p class="helper">${esc(t('chooseEvidence'))}</p>${evidenceGroups(state.story, state.selectedEvidence)}</fieldset>` : ''}${feedback}${explanation}${hint}<div class="task-actions">${action}${hintButton}</div></section></main></div>`;
 }
 
 function reveal() {
   const totals = taskTotals(state.story);
   return `<div class="app-shell">${header({ back: true })}<main class="page reveal-page" id="main"><div class="reveal-art">${storyImage(state.story, 'reveal-image')}<div class="reveal-glow"></div><div class="artifact">S</div><div class="confetti confetti-one"></div><div class="confetti confetti-two"></div><div class="confetti confetti-three"></div></div>${reviewBanner(state.story)}<div class="eyebrow">${esc(t('reward'))}</div><h1>${esc(text(state.story.reward.title))}</h1><p class="lead">${esc(text(state.story.reward.text))}</p><div class="reward-stats"><span><strong>+${totals.xp}</strong> XP</span><span><strong>${totals.solved}/${totals.total}</strong> ${esc(t('missions'))}</span></div><section class="sources-card"><div class="eyebrow">${esc(t('sources'))}</div>${state.story.sources.map((source) => `<a href="${esc(source.url)}" target="_blank" rel="noreferrer">${esc(source.title)} <span>↗</span></a>`).join('')}<small>${storyBadge(state.story)} · ${esc(state.story.sources[0]?.accessedAt || '')}</small></section><button class="primary-button wide" data-action="map" type="button">${esc(t('openMap'))} <span aria-hidden="true">→</span></button></main></div>`;
+}
+function diagnosticComplete() {
+  const totals = taskTotals(state.story);
+  return `<div class="app-shell">${header({ back: true })}<main class="page diagnostic-complete" id="main"><div class="completion-mark">✓</div><div class="eyebrow">${esc(t('diagnostic'))}</div><h1>${esc(t('diagnosticFinished'))}</h1><p class="lead">${esc(text(state.story.title))}</p><div class="reward-stats"><span><strong>${totals.solved}/${totals.total}</strong> ${esc(t('diagnosticTasks'))}</span><span>${esc(t('firstAttemptOnly'))}</span></div><button class="primary-button wide" data-action="map" type="button">${esc(t('openMap'))} <span aria-hidden="true">→</span></button></main></div>`;
+}
+
+function summarizeEvents(events) {
+  const first = events.filter((event) => event.firstTry);
+  const skills = Object.fromEntries(['find', 'infer', 'evidence'].map((skill) => { const rows = first.filter((event) => event.skill === skill); const num = rows.filter((event) => event.answerCorrect && (skill === 'find' || event.evidenceCorrect)).length; return [skill, { num, den: rows.length }]; }));
+  const diagnostic = first.filter((event) => event.mode === 'diagnostic');
+  return { skills, mainMetric: { num: diagnostic.filter((event) => event.answerCorrect && event.evidenceCorrect && event.hintsUsed === 0).length, den: diagnostic.length } };
+}
+function ratio(metric) { return metric.den ? `${metric.num}/${metric.den}` : t('noData'); }
+function results() {
+  const summary = summarizeEvents(state.teacherEvents);
+  return `<div class="app-shell">${header({ back: true })}<main class="page results-page" id="main"><div class="eyebrow">${esc(t('teacherCabinet'))}</div><h1>${esc(t('results'))}</h1><p class="lead">${esc(t('resultsIntro'))}</p><section class="results-tools"><button class="primary-button" data-action="export" type="button">${esc(t('exportResults'))}</button><label class="file-picker"><span>${esc(t('importResults'))}</span><input data-import-files type="file" accept="application/json,.json" multiple></label><p class="import-message" role="status">${esc(state.importMessage)}</p></section><section class="metric-card"><div class="eyebrow">${esc(t('mainMetric'))}</div><strong>${esc(ratio(summary.mainMetric))}</strong><p>${esc(t('mainMetricHint'))}</p></section><section class="skills-card"><div class="section-heading"><h2>${esc(t('skills'))}</h2><span>${state.teacherEvents.length} ${esc(t('events'))}</span></div><div class="skill-grid">${[['find', t('find')], ['infer', t('infer')], ['evidence', t('evidence')]].map(([key, label]) => `<article><span>${esc(label)}</span><strong>${esc(ratio(summary.skills[key]))}</strong></article>`).join('')}</div></section></main></div>`;
 }
 
 function bind() {
@@ -92,71 +127,45 @@ function bind() {
   document.querySelectorAll('[data-action]').forEach((button) => button.addEventListener('click', () => void action(button.dataset.action, button.dataset.story)));
   document.querySelectorAll('[data-option]').forEach((button) => button.addEventListener('click', () => { state.selectedOptions = [button.dataset.option]; render(); }));
   document.querySelectorAll('[data-evidence]').forEach((button) => button.addEventListener('click', () => { const id = button.dataset.evidence; state.selectedEvidence = state.selectedEvidence.includes(id) ? state.selectedEvidence.filter((value) => value !== id) : [...state.selectedEvidence, id]; render(); }));
+  document.querySelector('[data-import-files]')?.addEventListener('change', (event) => void importFiles(event.target.files));
 }
-
 async function action(name, storyId) {
   if (name === 'toggle-lang') { state.lang = state.lang === 'ru' ? 'kk' : 'ru'; saveLanguage(state.lang); return render(); }
   if (name === 'onboard') { finishOnboarding(); state.view = 'map'; return render(); }
-  if (name === 'map') { state.view = 'map'; state.feedback = null; return render(); }
-  if (name === 'open-story') { state.story = state.stories.find((story) => story.id === storyId) || state.story; state.view = 'story'; return render(); }
+  if (name === 'map') { state.view = 'map'; state.story = heroStory(); state.feedback = null; return render(); }
+  if (name === 'results') { state.view = 'results'; state.teacherEvents = await loadTeacherEvents(); return render(); }
+  if (name === 'export') return downloadResults();
+  if (name === 'open-story') { const story = state.stories.find((item) => item.id === storyId); if (!story || !storyUnlocked(story)) return; state.story = story; state.view = 'story'; return render(); }
   if (name === 'story') { state.view = 'story'; state.feedback = null; return render(); }
-  if (name === 'start-tasks') { state.taskIndex = 0; state.selectedOptions = []; state.selectedEvidence = []; state.feedback = null; state.hint = null; state.mentorState = 'none'; state.mentorSource = 'none'; state.view = 'task'; return render(); }
+  if (name === 'start-tasks') { if (!storyUnlocked(state.story)) return; state.taskIndex = state.story.tasks.findIndex((task) => !taskProgress(state.progress, state.story.id, task.id).solved); if (state.taskIndex < 0) { state.view = state.story.kind === 'diagnostic' ? 'diagnostic-complete' : 'reveal'; return render(); } state.selectedOptions = []; state.selectedEvidence = []; state.feedback = null; state.hint = null; state.mentorState = 'none'; state.mentorSource = 'none'; state.view = 'task'; return render(); }
   if (name === 'submit') return submitTask();
   if (name === 'hint') return showHint();
-  if (name === 'advance') { if (state.taskIndex === state.story.tasks.length - 1) state.view = 'reveal'; else { state.taskIndex += 1; state.selectedOptions = []; state.selectedEvidence = []; state.feedback = null; state.hint = null; state.mentorState = 'none'; state.mentorSource = 'none'; } return render(); }
+  if (name === 'advance') { if (state.taskIndex === state.story.tasks.length - 1) state.view = state.story.kind === 'diagnostic' ? 'diagnostic-complete' : 'reveal'; else { state.taskIndex += 1; state.selectedOptions = []; state.selectedEvidence = []; state.feedback = null; state.hint = null; state.mentorState = 'none'; state.mentorSource = 'none'; } return render(); }
   if (name === 'reset' && window.confirm(t('resetConfirm'))) { await resetProgress(); state.progress = await loadProgress(); state.view = 'onboarding'; state.feedback = null; return render(); }
 }
-
 async function submitTask() {
-  const task = state.story.tasks[state.taskIndex];
-  const result = evaluateTask(task, state.selectedOptions, state.selectedEvidence);
-  const entry = await recordAttempt(state.progress, state.story, task, result);
-  state.feedback = result;
-  state.hint = null;
-  const event = { eventId: globalThis.crypto?.randomUUID?.() || `event-${Date.now()}-${Math.random().toString(16).slice(2)}`, anonId: await getAnonId(), ts: new Date().toISOString(), contentVersion: state.manifest?.contentVersion || state.story.contentVersion, storyId: state.story.id, taskId: task.id, skill: task.skill, mode: state.story.kind, attempt: entry.attempts, answerCorrect: result.answerCorrect, evidenceCorrect: result.evidenceCorrect, hintsUsed: entry.hintsUsed, firstTry: entry.isFirstAttempt, lang: state.lang, mentorSource: state.mentorSource };
-  await queueEvent(event);
-  flushEvents().catch(() => {});
-  render();
+  const task = state.story.tasks[state.taskIndex]; if (state.story.kind === 'diagnostic' && state.feedback) return;
+  const result = evaluateTask(task, state.selectedOptions, state.selectedEvidence); const entry = await recordAttempt(state.progress, state.story, task, result); state.feedback = result; state.hint = null;
+  const event = { eventId: globalThis.crypto?.randomUUID?.() || `event-${Date.now()}-${Math.random().toString(16).slice(2)}`, anonId: await getAnonId(), ts: new Date().toISOString(), contentVersion: state.manifest?.contentVersion || state.story.contentVersion, storyId: state.story.id, taskId: task.id, skill: task.skill, mode: state.story.kind, attempt: entry.attempts, answerCorrect: result.answerCorrect, evidenceCorrect: result.evidenceCorrect, hintsUsed: entry.hintsUsed, firstTry: entry.isFirstAttempt, lang: state.lang, mentorSource: state.story.kind === 'diagnostic' ? 'none' : state.mentorSource };
+  await queueEvent(event); flushEvents().catch(() => {}); render();
 }
-
 async function showHint() {
-  const task = state.story.tasks[state.taskIndex];
-  const entry = await recordHint(state.progress, state.story.id, task.id);
-  const errorProfile = { answerWrong: Boolean(state.feedback && !state.feedback.answerCorrect), evidenceWrong: Boolean(state.feedback && !state.feedback.evidenceCorrect), attempt: entry.attempts || 1, hintsUsed: entry.hintsUsed, lastHintLevel: Math.max(0, entry.hintsUsed - 1) };
-  state.mentorSource = 'rules';
-  state.mentorState = navigator.onLine ? 'rules' : 'offline';
-  let hint = nextHint(task, entry.hintsUsed - 1);
-  if (navigator.onLine) {
-    try {
-      const response = await fetch('/api/mentor', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ storyId: state.story.id, taskId: task.id, skill: task.skill, errorProfile, lang: state.lang }), signal: AbortSignal.timeout(3500) });
-      if (!response.ok) throw new Error(`mentor HTTP ${response.status}`);
-      const result = await response.json();
-      const remoteHint = task.hints.find((item) => item.id === result.hintId);
-      if (remoteHint) hint = remoteHint;
-      if (result.source === 'ai') { state.mentorState = 'ai'; state.mentorSource = 'ai'; }
-    } catch { state.mentorState = 'offline'; }
-  }
-  state.hint = hint;
-  render();
+  if (state.story.kind === 'diagnostic') return;
+  const task = state.story.tasks[state.taskIndex]; const entry = await recordHint(state.progress, state.story.id, task.id); const errorProfile = { answerWrong: Boolean(state.feedback && !state.feedback.answerCorrect), evidenceWrong: Boolean(state.feedback && !state.feedback.evidenceCorrect), attempt: entry.attempts || 1, hintsUsed: entry.hintsUsed, lastHintLevel: Math.max(0, entry.hintsUsed - 1) };
+  state.mentorSource = 'rules'; state.mentorState = navigator.onLine ? 'rules' : 'offline'; let hint = nextHint(task, entry.hintsUsed - 1);
+  if (navigator.onLine) { try { const response = await fetch('/api/mentor', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ storyId: state.story.id, taskId: task.id, skill: task.skill, errorProfile, lang: state.lang }), signal: AbortSignal.timeout(3500) }); if (!response.ok) throw new Error(`mentor HTTP ${response.status}`); const result = await response.json(); const remoteHint = task.hints.find((item) => item.id === result.hintId); if (remoteHint) hint = remoteHint; if (result.source === 'ai') { state.mentorState = 'ai'; state.mentorSource = 'ai'; } } catch { state.mentorState = 'offline'; } }
+  state.hint = hint; render();
 }
-
+async function downloadResults() { const events = await exportEvents(); const blob = new Blob([JSON.stringify({ exportedAt: new Date().toISOString(), events }, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const link = document.createElement('a'); link.href = url; link.download = 'saulat-events.json'; link.click(); URL.revokeObjectURL(url); }
+async function importFiles(files) {
+  const messages = [];
+  for (const file of files || []) { try { const payload = JSON.parse(await file.text()); const result = await importTeacherEvents(payload); messages.push(`${file.name}: ${t('importAccepted')} ${result.accepted}, ${t('duplicates')} ${result.duplicates}`); } catch (error) { messages.push(`${file.name}: ${t('importRejected')} — ${error.message}`); } }
+  state.teacherEvents = await loadTeacherEvents(); state.importMessage = messages.join(' · '); render();
+}
 async function init() {
-  try {
-    state.progress = await loadProgress();
-    const bundle = await loadContent();
-    state.manifest = bundle.manifest;
-    state.stories = bundle.stories;
-    state.story = state.stories[0];
-    state.offlineReady = await prepareOffline(state.manifest);
-    state.offlineState = state.offlineReady ? 'ready' : 'error';
-    render();
-    flushEvents().catch(() => {});
-  } catch (error) {
-    state.offlineState = 'error';
-    app.innerHTML = `<main class="page error-page"><h1>SAUAT</h1><p>Не удалось загрузить историю: ${esc(error.message)}</p></main>`;
-  }
+  try { state.progress = await loadProgress(); const bundle = await loadContent(); state.manifest = bundle.manifest; state.stories = bundle.stories; state.story = heroStory(); state.teacherEvents = await loadTeacherEvents(); state.offlineReady = await prepareOffline(state.manifest); state.offlineState = state.offlineReady ? 'ready' : 'error'; render(); flushEvents().catch(() => {}); }
+  catch (error) { state.offlineState = 'error'; app.innerHTML = `<main class="page error-page"><h1>SAUAT</h1><p>Не удалось загрузить историю: ${esc(error.message)}</p></main>`; }
 }
-
 window.addEventListener('online', () => { state.offlineState = state.offlineReady ? 'ready' : 'checking'; render(); flushEvents().catch(() => {}); });
 window.addEventListener('offline', () => { state.offlineState = 'error'; render(); });
 init();

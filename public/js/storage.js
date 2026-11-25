@@ -1,5 +1,5 @@
 const DB_NAME = 'saulat-client';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const PROGRESS_KEY = 'saulat-progress-v1';
 const LANG_KEY = 'saulat-lang';
 const ONBOARDING_KEY = 'saulat-onboarded';
@@ -22,6 +22,8 @@ function openDb() {
       if (!db.objectStoreNames.contains('meta')) db.createObjectStore('meta', { keyPath: 'key' });
       if (!db.objectStoreNames.contains('progress')) db.createObjectStore('progress', { keyPath: 'key' });
       if (!db.objectStoreNames.contains('events')) db.createObjectStore('events', { keyPath: 'eventId' });
+      if (!db.objectStoreNames.contains('eventArchive')) db.createObjectStore('eventArchive', { keyPath: 'eventId' });
+      if (!db.objectStoreNames.contains('teacherEvents')) db.createObjectStore('teacherEvents', { keyPath: 'eventId' });
     };
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error || new Error('IndexedDB не открылся'));
@@ -82,7 +84,7 @@ export async function recordAttempt(progress, story, task, result) {
   const previous = taskProgress(progress, story.id, task.id);
   const isFirstAttempt = previous.attempts === 0;
   const earnedBefore = Number(previous.xpEarned || (previous.xpAwarded ? 25 : 0));
-  const earnedNow = result.complete && !previous.xpAwarded ? 25 : 0;
+  const earnedNow = story.kind === 'practice' && result.complete && !previous.xpAwarded ? 25 : 0;
   const entry = { ...previous, attempts: previous.attempts + 1, firstTry: previous.firstTry ?? { ...result }, solved: previous.solved || result.complete, xpAwarded: previous.xpAwarded || earnedNow > 0, xpEarned: earnedBefore + earnedNow };
   progress.xp += earnedNow;
   progress.tasks[key] = entry;
@@ -113,11 +115,60 @@ export async function getAnonId() {
 }
 
 export async function queueEvent(event) {
-  try { await idbPut('events', event); }
+  try { await idbPut('events', event); await idbPut('eventArchive', event); }
   catch {
     const events = JSON.parse(localStorage.getItem(EVENTS_KEY) || '[]');
     if (!events.some((item) => item.eventId === event.eventId)) localStorage.setItem(EVENTS_KEY, JSON.stringify([...events, event]));
   }
+}
+
+export async function exportEvents() {
+  try {
+    const archived = await idbAll('eventArchive');
+    const pending = await idbAll('events');
+    const byId = new Map([...archived, ...pending].map((event) => [event.eventId, event]));
+    return [...byId.values()].sort((left, right) => String(left.ts).localeCompare(String(right.ts)));
+  } catch {
+    try { return JSON.parse(localStorage.getItem(EVENTS_KEY) || '[]'); } catch { return []; }
+  }
+}
+
+function validEvent(event) {
+  return event && typeof event === 'object' && typeof event.eventId === 'string' && event.eventId.length > 0
+    && typeof event.anonId === 'string' && typeof event.ts === 'string' && Number.isInteger(event.contentVersion)
+    && typeof event.storyId === 'string' && typeof event.taskId === 'string'
+    && ['find', 'infer', 'evidence'].includes(event.skill) && ['practice', 'diagnostic'].includes(event.mode)
+    && Number.isInteger(event.attempt) && event.attempt > 0 && typeof event.answerCorrect === 'boolean'
+    && typeof event.evidenceCorrect === 'boolean' && Number.isInteger(event.hintsUsed) && event.hintsUsed >= 0
+    && typeof event.firstTry === 'boolean' && ['kk', 'ru'].includes(event.lang)
+    && ['ai', 'rules', 'none'].includes(event.mentorSource);
+}
+
+function extractEvents(payload) {
+  if (Array.isArray(payload)) return payload;
+  if (payload && Array.isArray(payload.events)) return payload.events;
+  return null;
+}
+
+export async function loadTeacherEvents() {
+  try { return await idbAll('teacherEvents'); } catch { return []; }
+}
+
+export async function importTeacherEvents(payload) {
+  const incoming = extractEvents(payload);
+  if (!incoming) throw new Error('Файл должен содержать массив events.');
+  if (incoming.some((event) => !validEvent(event))) throw new Error('Файл содержит повреждённое или несовместимое событие.');
+  const existing = new Set((await loadTeacherEvents()).map((event) => event.eventId));
+  const batch = new Set();
+  let accepted = 0;
+  let duplicates = 0;
+  for (const event of incoming) {
+    if (existing.has(event.eventId) || batch.has(event.eventId)) { duplicates += 1; continue; }
+    batch.add(event.eventId);
+    await idbPut('teacherEvents', event);
+    accepted += 1;
+  }
+  return { accepted, duplicates, rejected: 0 };
 }
 
 export async function flushEvents() {
@@ -135,5 +186,6 @@ export async function flushEvents() {
 export async function resetProgress() {
   try { await idbDelete('progress', 'state'); } catch { /* fallback below */ }
   try { const events = await idbAll('events'); for (const event of events) await idbDelete('events', event.eventId); } catch { /* fallback below */ }
+  try { const events = await idbAll('eventArchive'); for (const event of events) await idbDelete('eventArchive', event.eventId); } catch { /* fallback below */ }
   localStorage.removeItem(PROGRESS_KEY); localStorage.removeItem(EVENTS_KEY); localStorage.removeItem(ONBOARDING_KEY);
 }
