@@ -1,0 +1,168 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "sauat-story.schema.json",
+  "title": "SAUAT story (schemaVersion 1)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "contentVersion", "id", "kind", "reviewStatus", "title", "hook", "documents", "tasks", "reward", "sources"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "contentVersion": { "type": "integer", "minimum": 1 },
+    "id": { "type": "string", "pattern": "^[a-z0-9_]+$" },
+    "kind": { "enum": ["practice", "diagnostic"] },
+    "isTestFixture": { "type": "boolean" },
+    "reviewStatus": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kk", "ru"],
+      "properties": {
+        "kk": { "enum": ["draft", "reviewed", "approved"] },
+        "ru": { "enum": ["draft", "reviewed", "approved"] }
+      }
+    },
+    "title": { "$ref": "#/definitions/bilingual" },
+    "hook": { "$ref": "#/definitions/bilingual" },
+    "image": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "alt", "credit", "license", "isReconstruction"],
+      "properties": {
+        "file": { "type": "string" },
+        "alt": { "$ref": "#/definitions/bilingual" },
+        "credit": { "type": "string" },
+        "license": { "type": "string" },
+        "isReconstruction": { "type": "boolean" }
+      }
+    },
+    "documents": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "segments"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^d[0-9]+$" },
+          "title": { "$ref": "#/definitions/bilingual" },
+          "isFictional": { "type": "boolean" },
+          "segments": {
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["id", "text"],
+              "properties": {
+                "id": { "type": "string", "pattern": "^e[0-9]+$" },
+                "text": { "$ref": "#/definitions/bilingual" },
+                "sourceId": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "tasks": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/definitions/task" }
+    },
+    "reward": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "title", "text"],
+      "properties": {
+        "id": { "type": "string" },
+        "title": { "$ref": "#/definitions/bilingual" },
+        "text": { "$ref": "#/definitions/bilingual" }
+      }
+    },
+    "sources": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "title", "url", "accessedAt"],
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "type": "string" },
+          "url": { "type": "string" },
+          "accessedAt": { "type": "string" }
+        }
+      }
+    }
+  },
+  "if": { "properties": { "kind": { "const": "diagnostic" } } },
+  "then": {
+    "properties": {
+      "tasks": { "items": { "properties": { "hints": { "maxItems": 0 } } } }
+    }
+  },
+  "definitions": {
+    "bilingual": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kk", "ru"],
+      "properties": {
+        "kk": { "type": "string" },
+        "ru": { "type": "string" }
+      }
+    },
+    "task": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "skill", "question", "options", "correctOptionIds", "requireEvidence", "acceptedEvidenceSets", "hints", "explanation"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^t[0-9]+$" },
+        "type": { "enum": ["find", "infer_evidence", "claim_check"] },
+        "skill": { "enum": ["find", "infer", "evidence"] },
+        "question": { "$ref": "#/definitions/bilingual" },
+        "claim": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["text", "isTrue"],
+          "properties": {
+            "text": { "$ref": "#/definitions/bilingual" },
+            "isTrue": { "type": "boolean" }
+          }
+        },
+        "options": {
+          "type": "array",
+          "minItems": 2,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "text"],
+            "properties": {
+              "id": { "type": "string", "pattern": "^[a-z]$" },
+              "text": { "$ref": "#/definitions/bilingual" }
+            }
+          }
+        },
+        "correctOptionIds": { "type": "array", "minItems": 1, "items": { "type": "string" } },
+        "requireEvidence": { "type": "boolean" },
+        "acceptedEvidenceSets": {
+          "type": "array",
+          "items": { "type": "array", "minItems": 1, "items": { "type": "string", "pattern": "^e[0-9]+$" } }
+        },
+        "hints": {
+          "type": "array",
+          "maxItems": 3,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["id", "level", "text"],
+            "properties": {
+              "id": { "type": "string" },
+              "level": { "enum": [1, 2, 3] },
+              "strategy": { "enum": ["locate", "compare", "check_contradiction"] },
+              "text": { "$ref": "#/definitions/bilingual" }
+            }
+          }
+        },
+        "explanation": { "$ref": "#/definitions/bilingual" }
+      }
+    }
+  }
+}

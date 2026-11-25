@@ -1,0 +1,113 @@
+{
+  "schemaVersion": 1,
+  "id": "case_001",
+  "kind": "practice",
+  "reviewStatus": "draft",
+  "title": {
+    "kk": "",
+    "ru": ""
+  },
+  "hook": {
+    "kk": "",
+    "ru": ""
+  },
+  "documents": [
+    {
+      "id": "d1",
+      "segments": [
+        {
+          "id": "e1",
+          "text": {
+            "kk": "",
+            "ru": ""
+          }
+        },
+        {
+          "id": "e2",
+          "text": {
+            "kk": "",
+            "ru": ""
+          }
+        },
+        {
+          "id": "e3",
+          "text": {
+            "kk": "",
+            "ru": ""
+          }
+        }
+      ]
+    }
+  ],
+  "tasks": [
+    {
+      "id": "t1",
+      "skill": "evidence",
+      "type": "evidence_select",
+      "question": {
+        "kk": "",
+        "ru": ""
+      },
+      "options": [
+        {
+          "id": "a",
+          "text": {
+            "kk": "",
+            "ru": ""
+          }
+        },
+        {
+          "id": "b",
+          "text": {
+            "kk": "",
+            "ru": ""
+          }
+        },
+        {
+          "id": "c",
+          "text": {
+            "kk": "",
+            "ru": ""
+          }
+        }
+      ],
+      "correctOptionIds": [],
+      "acceptedEvidenceSets": [],
+      "hints": [
+        {
+          "id": "h1",
+          "text": {
+            "kk": "",
+            "ru": ""
+          }
+        },
+        {
+          "id": "h2",
+          "text": {
+            "kk": "",
+            "ru": ""
+          }
+        },
+        {
+          "id": "h3",
+          "text": {
+            "kk": "",
+            "ru": ""
+          }
+        }
+      ],
+      "explanation": {
+        "kk": "",
+        "ru": ""
+      }
+    }
+  ],
+  "rewardId": "artifact_001",
+  "sources": [
+    {
+      "title": "",
+      "url": "",
+      "accessedAt": ""
+    }
+  ]
+}
