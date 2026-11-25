@@ -1,0 +1,12 @@
+[
+  { "id": "first-answer-error", "taskId": "t2", "answerWrong": true, "evidenceWrong": false, "attempt": 1, "hintsUsed": 0, "lastHintLevel": 0 },
+  { "id": "first-evidence-error", "taskId": "t2", "answerWrong": false, "evidenceWrong": true, "attempt": 1, "hintsUsed": 0, "lastHintLevel": 0 },
+  { "id": "first-both-errors", "taskId": "t2", "answerWrong": true, "evidenceWrong": true, "attempt": 1, "hintsUsed": 0, "lastHintLevel": 0 },
+  { "id": "second-answer-error", "taskId": "t2", "answerWrong": true, "evidenceWrong": false, "attempt": 2, "hintsUsed": 1, "lastHintLevel": 1 },
+  { "id": "second-evidence-error", "taskId": "t2", "answerWrong": false, "evidenceWrong": true, "attempt": 2, "hintsUsed": 1, "lastHintLevel": 1 },
+  { "id": "second-both-errors", "taskId": "t2", "answerWrong": true, "evidenceWrong": true, "attempt": 2, "hintsUsed": 2, "lastHintLevel": 1 },
+  { "id": "third-no-error", "taskId": "t2", "answerWrong": false, "evidenceWrong": false, "attempt": 3, "hintsUsed": 2, "lastHintLevel": 2 },
+  { "id": "third-answer-error", "taskId": "t2", "answerWrong": true, "evidenceWrong": false, "attempt": 3, "hintsUsed": 2, "lastHintLevel": 2 },
+  { "id": "third-evidence-error", "taskId": "t2", "answerWrong": false, "evidenceWrong": true, "attempt": 3, "hintsUsed": 2, "lastHintLevel": 2 },
+  { "id": "answer-and-evidence-mixed", "taskId": "t2", "answerWrong": true, "evidenceWrong": false, "attempt": 4, "hintsUsed": 0, "lastHintLevel": 0 }
+]

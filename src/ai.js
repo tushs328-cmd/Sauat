@@ -1,3 +1,39 @@
+function modelName() {
+  return process.env.OLLAMA_MODEL || 'qwen2.5:1.5b';
+}
+
+export async function warmupOllama({ baseUrl = process.env.OLLAMA_URL, model = modelName(), timeoutMs = 15000, fetchImpl = fetch } = {}) {
+  if (!baseUrl) return false;
+  try {
+    const response = await fetchImpl(`${baseUrl.replace(/\/$/, '')}/api/generate`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ model, prompt: '', stream: false, options: { num_predict: 1 } }),
+      signal: AbortSignal.timeout(timeoutMs)
+    });
+    if (!response.ok) return false;
+    await response.json();
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function createAiState({ baseUrl = process.env.OLLAMA_URL, model = modelName(), timeoutMs = 15000, fetchImpl = fetch } = {}) {
+  const state = { status: baseUrl ? 'warming' : 'disabled', ready: Promise.resolve(false) };
+  if (baseUrl) {
+    state.ready = warmupOllama({ baseUrl, model, timeoutMs, fetchImpl }).then((available) => {
+      state.status = available ? 'available' : 'failed';
+      return available;
+    });
+  }
+  return state;
+}
+
+export function aiStatus(state) {
+  return state?.status === 'available' ? 'available' : 'fallback';
+}
+
 export async function askLocalMentor({ task, level }) {
   const baseUrl = process.env.OLLAMA_URL;
   if (!baseUrl) return null;
@@ -6,7 +42,7 @@ export async function askLocalMentor({ task, level }) {
     const response = await fetch(`${baseUrl.replace(/\/$/, '')}/api/generate`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ model: process.env.OLLAMA_MODEL || 'qwen2.5:1.5b', prompt, stream: false, options: { temperature: 0.2 } }),
+      body: JSON.stringify({ model: modelName(), prompt, stream: false, options: { temperature: 0.2 } }),
       signal: AbortSignal.timeout(3500)
     });
     if (!response.ok) return null;
@@ -23,7 +59,7 @@ export async function askLocalGrader({ task, text }) {
   const baseUrl = process.env.OLLAMA_URL;
   if (!baseUrl) return null;
   try {
-    const response = await fetch(`${baseUrl.replace(/\/$/, '')}/api/generate`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ model: process.env.OLLAMA_MODEL || 'qwen2.5:1.5b', prompt: `Оцени свободный ответ ученика только по источнику. Верни ровно YES или NO. Источник: ${task.quote}\nОтвет: ${text}`, stream: false, options: { temperature: 0 } }), signal: AbortSignal.timeout(3500) });
+    const response = await fetch(`${baseUrl.replace(/\/$/, '')}/api/generate`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ model: modelName(), prompt: `Оцени свободный ответ ученика только по источнику. Верни ровно YES или NO. Источник: ${task.quote}\nОтвет: ${text}`, stream: false, options: { temperature: 0 } }), signal: AbortSignal.timeout(3500) });
     if (!response.ok) return null;
     const result = await response.json();
     const output = String(result.response || '').trim().toUpperCase();

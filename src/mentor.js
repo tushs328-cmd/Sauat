@@ -1,17 +1,19 @@
 import { getManifest, getStoryForPublic } from './content.js';
 
-const mentorResponseSchema = {
-  type: 'object',
-  additionalProperties: false,
-  required: ['strategy', 'hintId', 'nextTaskId'],
-  properties: {
-    strategy: { type: 'string', enum: ['locate', 'compare', 'check_contradiction'] },
-    hintId: { type: ['string', 'null'] },
-    nextTaskId: { type: ['string', 'null'] }
-  }
-};
-
 const strategies = ['locate', 'compare', 'check_contradiction'];
+
+function responseSchema(allowedStrategies, hintIds, nextTaskId) {
+  return {
+    type: 'object',
+    additionalProperties: false,
+    required: ['strategy', 'hintId', 'nextTaskId'],
+    properties: {
+      strategy: { type: 'string', enum: allowedStrategies },
+      hintId: { type: ['string', 'null'], enum: [...hintIds, null] },
+      nextTaskId: { type: ['string', 'null'], enum: [nextTaskId] }
+    }
+  };
+}
 
 function storyContext(storyId) {
   const manifest = getManifest();
@@ -22,38 +24,53 @@ function storyContext(storyId) {
   return { story, entry };
 }
 
-function allowedContext(story, taskId) {
+function allowedContext(story, taskId, errorProfile = {}) {
   const task = story.tasks.find((item) => item.id === taskId);
   if (!task) return null;
   const taskIndex = story.tasks.findIndex((item) => item.id === taskId);
+  const nextTaskIds = story.tasks.filter((item, index) => index > taskIndex).map((item) => item.id);
+  const targetLevel = Math.min(Math.max(Number(errorProfile.lastHintLevel) || 0, 0) + 1, 3);
+  const levelHints = task.hints.filter((hint) => hint.level === targetLevel);
+  const fallbackStrategies = task.type === 'claim_check' ? ['check_contradiction'] : ['compare'];
+  const desiredStrategy = strategyFor(task, errorProfile);
+  const allowedStrategies = [...new Set([...levelHints.map((hint) => hint.strategy).filter(Boolean), desiredStrategy])];
   return {
     task,
-    hintIds: task.hints.map((hint) => hint.id),
-    nextTaskIds: story.tasks.filter((item, index) => index > taskIndex).map((item) => item.id)
+    targetLevel,
+    hintIds: levelHints.map((hint) => hint.id),
+    nextTaskIds,
+    nextTaskId: nextTaskIds[0] || null,
+    allowedStrategies: allowedStrategies.length ? allowedStrategies : fallbackStrategies
   };
 }
 
-export function getMentorContext({ storyId, taskId }) {
+export function getMentorContext({ storyId, taskId, errorProfile }) {
   const context = storyContext(storyId);
   if (!context) return null;
-  const allowed = allowedContext(context.story, taskId);
+  const allowed = allowedContext(context.story, taskId, errorProfile);
   if (!allowed) return null;
   return { ...context, ...allowed };
 }
 
-function ruleResponse(context, errorProfile) {
-  const { task, hintIds, nextTaskIds } = context;
-  const nextHintIndex = Math.min(Math.max(Number(errorProfile.lastHintLevel) || 0, 0), hintIds.length - 1);
-  const hintId = hintIds.length ? hintIds[nextHintIndex] : null;
-  const strategy = errorProfile.evidenceWrong ? 'check_contradiction' : errorProfile.answerWrong ? 'locate' : 'compare';
-  return { strategy, hintId, nextTaskId: nextTaskIds[0] || null, source: 'rules', taskId: task.id };
+function strategyFor(task, errorProfile) {
+  if (errorProfile.evidenceWrong) return task.type === 'claim_check' ? 'check_contradiction' : 'compare';
+  if (errorProfile.answerWrong) return 'locate';
+  return 'compare';
+}
+
+export function ruleResponse(context, errorProfile) {
+  const { task, nextTaskId } = context;
+  const nextLevel = Math.min(Math.max(Number(errorProfile.lastHintLevel) || 0, 0) + 1, 3);
+  const allHints = task.hints.slice().sort((left, right) => left.level - right.level);
+  const targetHint = allHints.find((hint) => hint.level === nextLevel) || allHints[allHints.length - 1] || null;
+  return { strategy: strategyFor(task, errorProfile), hintId: targetHint?.id || null, nextTaskId, source: 'rules', taskId: task.id };
 }
 
 function isAllowedResponse(value, context) {
   return value && typeof value === 'object'
-    && strategies.includes(value.strategy)
+    && context.allowedStrategies.includes(value.strategy)
     && (value.hintId === null || context.hintIds.includes(value.hintId))
-    && (value.nextTaskId === null || context.nextTaskIds.includes(value.nextTaskId));
+    && value.nextTaskId === context.nextTaskId;
 }
 
 function timeoutMs() {
@@ -61,12 +78,31 @@ function timeoutMs() {
   return Number.isFinite(configured) && configured > 0 ? Math.min(configured, 3500) : 3500;
 }
 
-export async function askStructuredMentor(input, context) {
+function fewShotExamples(context) {
+  const firstHint = context.task.hints.slice().sort((left, right) => left.level - right.level)[0]?.id || null;
+  const secondHint = context.task.hints.slice().sort((left, right) => left.level - right.level)[1]?.id || firstHint;
+  const thirdHint = context.task.hints.slice().sort((left, right) => left.level - right.level)[2]?.id || secondHint;
+  const evidenceStrategy = context.task.type === 'claim_check' ? 'check_contradiction' : 'compare';
+  return [
+    { profile: { answerWrong: true, evidenceWrong: false, attempt: 1, hintsUsed: 0, lastHintLevel: 0 }, answer: { strategy: 'locate', hintId: firstHint, nextTaskId: context.nextTaskId } },
+    { profile: { answerWrong: false, evidenceWrong: true, attempt: 2, hintsUsed: 1, lastHintLevel: 1 }, answer: { strategy: evidenceStrategy, hintId: secondHint, nextTaskId: context.nextTaskId } },
+    { profile: { answerWrong: true, evidenceWrong: true, attempt: 3, hintsUsed: 2, lastHintLevel: 2 }, answer: { strategy: evidenceStrategy, hintId: thirdHint, nextTaskId: context.nextTaskId } },
+    { profile: { answerWrong: false, evidenceWrong: false, attempt: 2, hintsUsed: 0, lastHintLevel: 1 }, answer: { strategy: context.allowedStrategies[0], hintId: secondHint, nextTaskId: context.nextTaskId } }
+  ];
+}
+
+export async function askStructuredMentor(input, context, { aiReady = true } = {}) {
   const fallback = ruleResponse(context, input.errorProfile);
   const baseUrl = process.env.OLLAMA_URL;
-  if (!baseUrl) return fallback;
+  if (!baseUrl || !aiReady) return fallback;
   const prompt = JSON.stringify({
     role: 'Выбор стратегии подсказки. Не создавай факты и не пиши текст ученику.',
+    rules: [
+      'Ответ неверен → strategy locate.',
+      'Доказательство неверно → strategy compare, либо check_contradiction для claim_check.',
+      'Оба неверны → повторная попытка с растущим уровнем подсказки; нельзя прыгать через уровень.',
+      'nextTaskId всегда должен быть следующим заданием по порядку, без пропуска.'
+    ],
     input: {
       storyId: input.storyId,
       taskId: input.taskId,
@@ -74,7 +110,8 @@ export async function askStructuredMentor(input, context) {
       lang: input.lang,
       errorProfile: input.errorProfile
     },
-    allowed: { hintIds: context.hintIds, nextTaskIds: context.nextTaskIds, strategies }
+    allowed: { hintIds: context.hintIds, nextTaskIds: [context.nextTaskId], strategies: context.allowedStrategies, level: context.targetLevel },
+    fewShot: fewShotExamples(context)
   });
   try {
     const response = await fetch(`${baseUrl.replace(/\/$/, '')}/api/generate`, {
@@ -84,7 +121,7 @@ export async function askStructuredMentor(input, context) {
         model: process.env.OLLAMA_MODEL || 'qwen2.5:1.5b',
         prompt,
         stream: false,
-        format: mentorResponseSchema,
+        format: responseSchema(context.allowedStrategies, context.hintIds, context.nextTaskId),
         options: { temperature: 0 }
       }),
       signal: AbortSignal.timeout(timeoutMs())
@@ -99,4 +136,4 @@ export async function askStructuredMentor(input, context) {
   }
 }
 
-export { mentorResponseSchema };
+export { responseSchema as mentorResponseSchema };

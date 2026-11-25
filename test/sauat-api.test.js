@@ -121,11 +121,28 @@ test('mentor принимает только allowlisted structured response', a
   assert.equal(valid.body.source, 'ai');
   assert.equal(valid.body.nextTaskId, 't2');
   assert.doesNotMatch(seenPrompt, /Бумажный мост|ТЕСТОВЫЙ ФРАГМЕНТ/);
+  const promptObject = JSON.parse(seenPrompt);
+  assert.equal(promptObject.fewShot.length, 4);
+  assert.match(promptObject.rules.join(' '), /nextTaskId/);
 
   const invalidJson = await mockOllama(async () => new Response(JSON.stringify({ response: '{bad json' }), { status: 200 }), () => request('/api/mentor', { method: 'POST', body: JSON.stringify(input()) }));
   assert.equal(invalidJson.body.source, 'rules');
-  const invalidId = await mockOllama(async () => new Response(JSON.stringify({ response: JSON.stringify({ strategy: 'locate', hintId: 'not-allowed', nextTaskId: null }) }), { status: 200 }), () => request('/api/mentor', { method: 'POST', body: JSON.stringify(input()) }));
+  const invalidId = await mockOllama(async () => new Response(JSON.stringify({ response: JSON.stringify({ strategy: 'locate', hintId: 'h3', nextTaskId: 't2' }) }), { status: 200 }), () => request('/api/mentor', { method: 'POST', body: JSON.stringify(input()) }));
   assert.equal(invalidId.body.source, 'rules');
+  assert.equal(invalidId.body.hintId, 'h1');
+});
+
+test('rules mentor raises hint level one step and never skips next task', async () => {
+  process.env.INCLUDE_DRAFT = '1';
+  delete process.env.OLLAMA_URL;
+  const requestFor = (lastHintLevel) => request('/api/mentor', { method: 'POST', body: JSON.stringify({ storyId: 'case_001', taskId: 't2', skill: 'infer', errorProfile: { answerWrong: true, evidenceWrong: false, attempt: lastHintLevel + 1, hintsUsed: lastHintLevel, lastHintLevel }, lang: 'ru' }) });
+  const first = await requestFor(0);
+  const second = await requestFor(1);
+  const third = await requestFor(2);
+  assert.deepEqual([first.body.hintId, second.body.hintId, third.body.hintId], ['t2_h1', 't2_h2', 't2_h3']);
+  assert.equal(first.body.strategy, 'locate');
+  assert.deepEqual([first.body.nextTaskId, second.body.nextTaskId, third.body.nextTaskId], ['t3', 't3', 't3']);
+  process.env.INCLUDE_DRAFT = '0';
 });
 
 test('mentor timeout, body limit и rate limit не раскрывают модель', async () => {

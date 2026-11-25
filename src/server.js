@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import { createStorage } from './storage.js';
 import { clearSessions, getClassCodes, login, requireAuth } from './auth.js';
 import { getTask, publicTask, taskBank, taskCounts } from './taskBank.js';
-import { askLocalGrader, askLocalMentor } from './ai.js';
+import { aiStatus, askLocalGrader, askLocalMentor, createAiState } from './ai.js';
 import { getManifest, getStoryForPublic } from './content.js';
 import { extractEvents, ingestEvents, summarizeEvents } from './events.js';
 import { askStructuredMentor, getMentorContext } from './mentor.js';
@@ -52,7 +52,7 @@ function makeRateLimiter(limit = 30, windowMs = 60_000) {
   };
 }
 
-export function createApp({ dataPath = defaultDataPath, mentorContextResolver = getMentorContext } = {}) {
+export function createApp({ dataPath = defaultDataPath, mentorContextResolver = getMentorContext, aiState = createAiState() } = {}) {
   const app = express();
   const storage = createStorage(dataPath);
   const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 2 * 1024 * 1024 } });
@@ -65,7 +65,7 @@ export function createApp({ dataPath = defaultDataPath, mentorContextResolver = 
   app.use(express.urlencoded({ extended: false }));
   app.use(express.static(path.join(root, 'public')));
 
-  app.get('/api/health', (req, res) => res.json({ ok: true, product: 'Сауат', mode: modeLabel(), ai: process.env.OLLAMA_URL ? 'available' : 'fallback', includeDraft: contentOptions().includeDraft, contentVersion: getManifest(contentOptions()).contentVersion, taskCounts }));
+  app.get('/api/health', (req, res) => res.json({ ok: true, product: 'Сауат', mode: modeLabel(), ai: aiStatus(aiState), includeDraft: contentOptions().includeDraft, contentVersion: getManifest(contentOptions()).contentVersion, taskCounts }));
   app.get('/content/manifest.json', (req, res) => {
     try { return res.json(getManifest(contentOptions())); }
     catch (error) { return res.status(500).json({ error: 'Манифест контента недоступен', detail: error.message }); }
@@ -92,7 +92,8 @@ export function createApp({ dataPath = defaultDataPath, mentorContextResolver = 
     const context = mentorContextResolver(req.body);
     if (!context) return res.status(404).json({ error: 'История или задание не найдены' });
     if (context.story.kind === 'diagnostic') return res.status(400).json({ error: 'ИИ-наставник запрещён для diagnostic-историй.' });
-    return askStructuredMentor(req.body, context).then((result) => res.json(result)).catch(() => res.json({ strategy: 'locate', hintId: context.hintIds[0] || null, nextTaskId: context.nextTaskIds[0] || null, source: 'rules' }));
+    const aiReady = aiState.status === 'available' || aiState.status === 'disabled';
+    return askStructuredMentor(req.body, context, { aiReady }).then((result) => res.json(result)).catch(() => res.json({ strategy: 'locate', hintId: context.hintIds[0] || null, nextTaskId: context.nextTaskIds[0] || null, source: 'rules' }));
   });
 
   app.post('/api/events', (req, res) => {
