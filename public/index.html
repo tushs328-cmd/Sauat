@@ -3,57 +3,16 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#0d3b3b">
-  <meta name="description" content="Сауат — офлайн-тренажёр функциональной грамотности для 7–9 классов">
-  <title>Сауат — читать, понимать, действовать</title>
+  <meta name="theme-color" content="#168D83">
+  <meta name="description" content="SAUAT — читай, исследуй, доказывай">
+  <title>Сауат / SAUAT — Оқы да дәлелде</title>
   <link rel="manifest" href="/manifest.webmanifest">
-  <link rel="stylesheet" href="/styles.css">
+  <link rel="stylesheet" href="/sauat.css">
+  <link rel="alternate stylesheet" href="/styles.css" title="legacy stylesheet">
 </head>
 <body>
-  <a class="skip-link" href="#main">Перейти к содержанию</a>
-  <div id="toast" class="toast" role="status" aria-live="polite"></div>
-  <section id="login-view" class="login-view">
-    <div class="login-art" aria-hidden="true"><div class="orb orb-a"></div><div class="orb orb-b"></div><div class="path-line"></div></div>
-    <div class="login-card">
-      <div class="brand-mark"><span class="mark-glyph">С</span><span><strong>Сауат</strong><small>оқу · түсіну · қолдану</small></span></div>
-      <p class="eyebrow" data-i18n="offlineLabel">ОФЛАЙН-ПЛАТФОРМА</p>
-      <h1 data-i18n="loginTitle">Читать, понимать, действовать</h1>
-      <p class="intro" data-i18n="loginIntro">Тренажёр функциональной грамотности для 7–9 классов. Без рейтингов и лишних данных.</p>
-      <form id="login-form" class="stack-form">
-        <fieldset>
-          <legend data-i18n="chooseRole">Выберите роль</legend>
-          <div class="role-grid">
-            <label class="role-option"><input type="radio" name="role" value="student" checked><span><b data-i18n="student">Ученик</b><small data-i18n="studentHint">Код класса и имя</small></span></label>
-            <label class="role-option"><input type="radio" name="role" value="teacher"><span><b data-i18n="teacher">Учитель</b><small data-i18n="teacherHint">Класс и задания</small></span></label>
-            <label class="role-option"><input type="radio" name="role" value="admin"><span><b data-i18n="admin">Администратор</b><small data-i18n="adminHint">Данные школы</small></span></label>
-          </div>
-        </fieldset>
-        <label for="name" id="name-label" data-i18n="nameLabel">Имя или псевдоним</label>
-        <input id="name" name="name" autocomplete="nickname" required maxlength="40" placeholder="Например, Аян">
-        <label for="class-code" data-i18n="codeLabel">Код доступа</label>
-        <input id="class-code" name="classCode" required maxlength="12" autocomplete="off" placeholder="SAULAT7">
-        <p class="helper" id="code-helper" data-i18n="codeHelper">Для демо: SAULAT7 · имя не является ФИО.</p>
-        <p id="login-error" class="form-error" role="alert"></p>
-        <button class="button button-primary button-wide" type="submit" data-i18n="enter">Войти в Сауат</button>
-      </form>
-      <div class="login-foot"><span class="status-dot"></span><span data-i18n="localData">Данные остаются на этом устройстве</span><button id="login-lang" class="text-button" type="button">ҚАЗ</button></div>
-    </div>
-  </section>
-
-  <div id="app-view" class="app-view hidden">
-    <header class="topbar">
-      <div class="brand-mark compact"><span class="mark-glyph">С</span><span><strong>Сауат</strong><small data-i18n="appTagline">Функциональная грамотность</small></span></div>
-      <div class="top-actions"><span id="mode-badge" class="mode-badge">Без ИИ · офлайн</span><button id="language-toggle" class="button button-quiet" type="button">ҚАЗ</button><button id="logout" class="button button-quiet" type="button" data-i18n="logout">Выйти</button></div>
-    </header>
-    <div class="shell">
-      <aside class="sidebar" aria-label="Навигация">
-        <div class="user-chip"><div id="user-avatar" class="avatar">С</div><div><strong id="user-name">Ученик</strong><small id="user-role">Ученик</small></div></div>
-        <nav id="nav" class="nav-list"></nav>
-        <div class="offline-card"><span class="status-dot"></span><div><strong data-i18n="offlineMode">Офлайн-режим</strong><small data-i18n="offlineModeHint">Синхронизация выключена</small></div></div>
-      </aside>
-      <main id="main" class="main-content" tabindex="-1"></main>
-    </div>
-  </div>
-  <script src="/app.js" defer></script>
+  <a class="skip-link" href="#app">Перейти к игре</a>
+  <div id="app"></div>
+  <script type="module" src="/js/main.js"></script>
 </body>
 </html>
