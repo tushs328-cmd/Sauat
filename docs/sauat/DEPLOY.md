@@ -7,6 +7,18 @@ npm install
 npm run build:static
 ```
 
+For a jury/demo bundle with the current draft stories, use:
+
+```bash
+npm run build:demo
+npm run test:static -- --include-draft
+```
+
+This demo build is not a publication approval: it includes draft review statuses
+and should be opened with `?jury=1` to make the included stories directly
+available during a presentation. The ordinary route intentionally keeps the
+next practice story locked until the previous one is completed.
+
 The build copies the public shell, published content and a generated
 `content/manifest.json`. Draft stories and test fixtures are not placed in the
 manifest. Until a story is approved in both languages, the offline shell uses
