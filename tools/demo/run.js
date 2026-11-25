@@ -51,7 +51,7 @@ let error = null;
 try {
   cli(['open', baseUrl]);
   cli(['resize', '1280', '720']);
-  cli(['video-start', videoPath]);
+  cli(['video-start', videoPath, '--size', '1280x720']);
   code(`async page => {
     await page.evaluate(() => {
       const style = document.createElement('style');
