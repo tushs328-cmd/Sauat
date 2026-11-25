@@ -33,7 +33,7 @@
 
 ## Команды
 
-- `node qa/run.js` из копии приложения — exit 0; 16 сценариев, 14 PASS / 2 FAIL (BUG-001 и BUG-003).
+- `node qa/run.js` из копии приложения — exit 0; 25 сценариев, 18 PASS / 7 FAIL (BUG-001 и BUG-003).
 - `node tools/qa/a11y_perf.js` — exit 0; 7 synthetic sessions, `qa/out/a11y-perf.json`.
 - `npm test` — exit 0; 59/59.
 

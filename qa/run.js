@@ -122,9 +122,11 @@ function completePractice(session, persona, switchLanguage) {
         if (${JSON.stringify(persona)} === 'double-click') { await evidence.nth(evidenceIndex).dblclick(); } else { await evidence.nth(evidenceIndex).click(); }
       }
       await check.click();
+      await page.waitForTimeout(250);
       const status = await page.locator('[role="status"]').allTextContents();
       tasks.push({ index: index + 1, answerIndex, evidenceIndex: evidenceCount ? 0 : null, hintsUsed, status: status.join(' ').slice(0, 300) });
       const next = page.getByRole('button', { name: /Следующий шаг|Келесі қадам/ });
+      await next.first().waitFor({ state: 'visible', timeout: 3000 }).catch(() => {});
       if (await next.count()) await next.click(); else break;
     }
     return { tasks, body: (await page.locator('body').innerText()).slice(-1200), buttons: await page.locator('button').allTextContents() };
@@ -401,15 +403,14 @@ const addScenario = (id, factory) => {
 for (const lang of ['ru', 'kk']) {
   for (const [width, height] of [[360, 800], [768, 1024], [1440, 900]]) {
     addScenario(`${lang}-${width}-first`, () => runScenario({ lang, width, height, persona: 'first' }));
+    addScenario(`diagnostic-${lang}-${width}`, () => runDiagnostic({ lang, width, height }));
+    addScenario(`story-availability-${lang}-${width}`, () => runStoryAvailability({ lang, width, height }));
   }
 }
 addScenario('ru-360-random', () => runScenario({ lang: 'ru', width: 360, height: 800, persona: 'random' }));
 addScenario('ru-360-hint-eater', () => runScenario({ lang: 'ru', width: 360, height: 800, persona: 'hint-eater' }));
 addScenario('ru-360-double-click', () => runScenario({ lang: 'ru', width: 360, height: 800, persona: 'double-click' }));
 addScenario('ru-360-first-switch', () => runScenario({ lang: 'ru', width: 360, height: 800, persona: 'first', switchLanguage: true }));
-addScenario('diagnostic-ru-360', () => runDiagnostic({ lang: 'ru', width: 360, height: 800 }));
-addScenario('diagnostic-kk-768', () => runDiagnostic({ lang: 'kk', width: 768, height: 1024 }));
-addScenario('story-availability-ru-360', () => runStoryAvailability({ lang: 'ru', width: 360, height: 800 }));
 addScenario('tab-return-ru-360', () => runTabReturn({ lang: 'ru', width: 360, height: 800 }));
 addScenario('teacher-import-ru-360', () => runTeacherImport({ lang: 'ru', width: 360, height: 800 }));
 addScenario('offline-ru-360', () => runOffline({ lang: 'ru', width: 360, height: 800 }));
