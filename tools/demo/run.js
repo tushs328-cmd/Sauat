@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const baseUrl = process.env.DEMO_BASE_URL || 'http://localhost:3400';
 const durationMs = Number(process.env.DEMO_DURATION_MS || 180000);
-const cliOverheadMs = 42_000;
+const cliOverheadMs = 56_000;
 const outputDir = path.resolve(process.env.DEMO_OUTPUT_DIR || path.join(root, 'docs', 'demo'));
 const videoPath = path.join(outputDir, process.env.DEMO_VIDEO_NAME || 'sauat-demo.webm');
 const session = `sauat-demo-${Date.now()}`;
@@ -50,7 +50,7 @@ const phase = async (title, body, ms) => {
 let error = null;
 try {
   cli(['open', baseUrl]);
-  cli(['resize', '1440', '900']);
+  cli(['resize', '1280', '720']);
   cli(['video-start', videoPath]);
   code(`async page => {
     await page.evaluate(() => {
@@ -68,13 +68,15 @@ try {
   }`);
 
   const scriptedDurationMs = Math.max(10000, durationMs - cliOverheadMs);
-  const phaseMs = Math.max(2000, Math.floor((scriptedDurationMs - 18000) / 5));
-  await phase('01 • Карта маршрута', `await page.waitForTimeout(1000);`, phaseMs);
-  await phase('02 • История «Золотой человек»', `const start = page.getByRole('button', { name: /Начать маршрут|Бағытты бастау/ }).last(); if (await start.count()) await start.click();`, phaseMs);
-  await phase('03 • Задания и подсказка', `const tasks = page.getByRole('button', { name: /Перейти к заданиям|Тапсырмаларға өту/ }); if (await tasks.count()) await tasks.click(); const hint = page.getByRole('button', { name: /Подсказ|Көмек/ }); if (await hint.count()) await hint.first().click();`, phaseMs);
-  await phase('04 • Ответы ученика', `for (let i = 0; i < 6; i += 1) { const answers = page.getByRole('group', { name: /Ответ|Жауап/ }).getByRole('button'); if (!(await answers.count())) break; await answers.first().click(); const evidence = page.getByRole('button', { name: /^e/ }); if (await evidence.count()) await evidence.first().click(); const check = page.getByRole('button', { name: /^(Проверить|Тексеру)$/ }); if (!(await check.count())) break; await check.click(); const next = page.getByRole('button', { name: /Следующий шаг|Келесі қадам/ }); if (!(await next.count())) break; await next.click(); }`, phaseMs);
-  await phase('05 • Результат и экспорт', `const exportButton = page.getByRole('button', { name: /Экспорт результатов|Нәтижелерді экспорттау/ }); if (await exportButton.count()) await exportButton.click();`, phaseMs);
-  await phase('06 • Финальный кадр', `await page.waitForTimeout(1000);`, Math.max(0, scriptedDurationMs - (phaseMs * 5 + 18000)));
+  const phaseMs = Math.max(2000, Math.floor((scriptedDurationMs - 20000) / 8));
+  await phase('01 • Хук и карта маршрута', `await page.waitForTimeout(1000);`, phaseMs);
+  await phase('02 • Документы истории', `const mapStart = page.getByRole('button', { name: /Начать маршрут|Бағытты бастау/ }).first(); if (await mapStart.count()) await mapStart.click(); const storyStart = page.getByRole('button', { name: /Начать маршрут|Бағытты бастау/ }).last(); if (await storyStart.count()) await storyStart.click();`, phaseMs);
+  await phase('03 • Ошибка доказательства', `const tasks = page.getByRole('button', { name: /Перейти к заданиям|Тапсырмаларға өту/ }); if (await tasks.count()) await tasks.click(); const answers = page.getByRole('group', { name: /Ответ|Жауап/ }).getByRole('button'); if (await answers.count()) await answers.first().click(); const evidence = page.getByRole('button', { name: /^e/ }); if (await evidence.count()) await evidence.first().click(); const check = page.getByRole('button', { name: /^(Проверить|Тексеру)$/ }); if (await check.count()) await check.click();`, phaseMs);
+  await phase('04 • Подсказка по правилам', `const hint = page.getByRole('button', { name: /Показать подсказку|Көрсетілген көмек/ }); if (await hint.count()) await hint.first().click();`, phaseMs);
+  await phase('05 • Исправленный ответ', `const correctEvidence = page.getByRole('button', { name: /^e7/ }); if (await correctEvidence.count()) await correctEvidence.click(); const checkAgain = page.getByRole('button', { name: /^(Проверить|Тексеру)$/ }); if (await checkAgain.count()) await checkAgain.click();`, phaseMs);
+  await phase('06 • Оффлайн-перезагрузка', `await page.context().setOffline(true); await page.reload({ waitUntil: 'domcontentloaded', timeout: 12000 }).catch(() => {}); const offlineBody = await page.locator('body').innerText(); await page.context().setOffline(false); await page.evaluate((text) => window.__sauatSubtitle?.(text), offlineBody.includes('SAUAT') ? 'Оффлайн доступен' : 'Оффлайн-перезагрузка • BUG-001');`, phaseMs);
+  await phase('07 • Новая история и диагностика', `await page.goto(${JSON.stringify(baseUrl)}); const storyCards = await page.getByText(/Аральское море|Байқоңыр/).count(); const diagnostics = page.getByRole('button', { name: /Открыть диагностику|Диагностиканы ашу/ }); if (await diagnostics.count()) await diagnostics.click(); await page.evaluate((count) => window.__sauatSubtitle?.(count ? 'Новая история: карточка заблокирована' : 'Новая история не найдена'), storyCards);`, phaseMs);
+  await phase('08 • Кабинет учителя и экспорт', `const back = page.getByRole('button', { name: /← Назад/ }).first(); if (await back.count()) await back.click(); const cabinet = page.getByRole('button', { name: /Кабинет учителя/ }); if (await cabinet.count()) await cabinet.click(); const exportButton = page.getByRole('button', { name: /Экспорт результатов|Нәтижелерді экспорттау/ }); if (await exportButton.count()) await exportButton.click();`, Math.max(0, scriptedDurationMs - (phaseMs * 8 + 20000)));
 } catch (caught) {
   error = String(caught);
 } finally {
