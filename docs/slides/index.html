@@ -1,0 +1,327 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="icon" href="data:,">
+  <title>SAUAT | читать, исследовать, доказывать</title>
+  <style>
+    :root {
+      --ink: #163d3b;
+      --ink-2: #245b55;
+      --cream: #f6f3e9;
+      --paper: #fffdf7;
+      --gold: #d9a72c;
+      --mint: #b9e5d0;
+      --muted: #647773;
+      --line: #d8e2d9;
+      --red: #9f4d37;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; background: #dfe8df; color: var(--ink); font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+    body { overflow: hidden; }
+    button, a { font: inherit; }
+    .deck { position: relative; width: 100vw; height: 100vh; overflow: hidden; }
+    .slide { display: none; position: relative; width: 100vw; height: 100vh; overflow: hidden; padding: 5.5vh 6.5vw 6.5vh; background: var(--paper); }
+    .slide.is-active { display: block; }
+    .slide::before { content: ""; position: absolute; inset: 0; pointer-events: none; background: radial-gradient(circle at 92% 8%, rgba(217,167,44,.16), transparent 25%), linear-gradient(135deg, rgba(185,229,208,.16), transparent 42%); }
+    .slide.dark { color: var(--cream); background: var(--ink); }
+    .slide.dark::before { background: radial-gradient(circle at 82% 18%, rgba(217,167,44,.22), transparent 28%), radial-gradient(circle at 10% 90%, rgba(185,229,208,.12), transparent 28%); }
+    .content { position: relative; z-index: 1; height: 100%; display: flex; flex-direction: column; }
+    .kicker { color: var(--gold); font-size: clamp(12px, 1.15vw, 17px); font-weight: 850; letter-spacing: .13em; text-transform: uppercase; }
+    .dark .kicker { color: var(--mint); }
+    h1, h2, h3, p { margin: 0; }
+    h1 { max-width: 1060px; margin-top: 2.2vh; font-size: clamp(38px, 5.4vw, 82px); line-height: .98; letter-spacing: -.055em; }
+    h2 { font-size: clamp(28px, 3.4vw, 54px); line-height: 1.03; letter-spacing: -.045em; }
+    h3 { font-size: clamp(18px, 1.65vw, 27px); line-height: 1.1; }
+    .lead { max-width: 900px; margin-top: 2.4vh; color: var(--muted); font-size: clamp(18px, 1.8vw, 29px); line-height: 1.28; }
+    .dark .lead { color: #d1e4d7; }
+    .source { margin-top: auto; color: var(--muted); font-size: clamp(10px, .95vw, 14px); line-height: 1.35; }
+    .dark .source { color: #a9c8b8; }
+    .source a, a { color: var(--ink-2); }
+    .dark a { color: var(--mint); }
+    .wordmark { display: inline-flex; align-items: center; gap: 14px; font-weight: 900; letter-spacing: .1em; }
+    .mark { display: grid; place-items: center; width: 58px; height: 58px; border-radius: 17px; color: var(--cream); background: var(--gold); font-size: 31px; letter-spacing: 0; }
+    .title-slide { justify-content: center; }
+    .title-slide h1 { max-width: 900px; margin-top: 7vh; }
+    .title-slide .lead { max-width: 620px; }
+    .meta { display: flex; flex-wrap: wrap; gap: 12px 26px; margin-top: 5vh; color: #c6ddd0; font-size: clamp(14px, 1.2vw, 18px); }
+    .number { position: absolute; right: 6.5vw; top: 5.5vh; color: var(--gold); font-weight: 900; font-size: clamp(18px, 1.5vw, 24px); }
+    .dark .number { color: var(--mint); }
+    .split { display: grid; grid-template-columns: 1.05fr .95fr; gap: 5vw; align-items: center; flex: 1; }
+    .statement { font-size: clamp(26px, 3.1vw, 49px); line-height: 1.08; letter-spacing: -.04em; }
+    .accent { color: var(--gold); }
+    .stat-row { display: flex; align-items: end; gap: 16px; margin-top: 4vh; }
+    .stat { color: var(--gold); font-size: clamp(72px, 11vw, 170px); line-height: .8; font-weight: 900; letter-spacing: -.09em; }
+    .stat-label { max-width: 240px; color: var(--muted); font-size: clamp(15px, 1.25vw, 20px); line-height: 1.2; }
+    .source-box { padding: 22px 24px; border-left: 4px solid var(--gold); background: #eef5eb; color: var(--ink); }
+    .source-box strong { display: block; margin-bottom: 8px; font-size: 15px; }
+    .source-box p { color: var(--muted); font-size: 14px; line-height: 1.45; }
+    .flow { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; align-items: stretch; margin-top: 8vh; }
+    .flow-step { position: relative; min-height: 220px; padding: 24px; border-top: 6px solid var(--gold); background: #eef5eb; }
+    .flow-step:nth-child(2) { border-color: var(--mint); }
+    .flow-step:nth-child(3) { border-color: var(--ink-2); }
+    .flow-step .step-no { color: var(--gold); font-size: 17px; font-weight: 900; }
+    .flow-step h3 { margin-top: 42px; }
+    .flow-step p { margin-top: 13px; color: var(--muted); font-size: clamp(14px, 1.25vw, 19px); line-height: 1.35; }
+    .flow-arrow { position: absolute; top: 47%; right: -20px; z-index: 2; color: var(--gold); font-size: 26px; font-weight: 900; }
+    .shot-grid { display: grid; grid-template-columns: 1.15fr .85fr .85fr; gap: 18px; align-items: stretch; margin-top: 4.5vh; flex: 1; min-height: 0; }
+    .shot { min-height: 0; overflow: hidden; border: 1px solid var(--line); background: var(--cream); }
+    .shot.large { grid-row: span 2; }
+    .shot img { display: block; width: 100%; height: 100%; object-fit: contain; object-position: center; background: #eaf1eb; }
+    .shot figcaption { padding: 9px 12px; color: var(--muted); background: var(--paper); font-size: 12px; }
+    .demo-link { display: inline-flex; align-items: center; gap: 10px; margin-top: 2.4vh; color: var(--ink-2); font-weight: 800; text-decoration: none; }
+    .demo-link span { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 50%; color: var(--cream); background: var(--gold); }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 5vw; align-items: start; margin-top: 6vh; }
+    .big-line { margin-top: 18px; font-size: clamp(28px, 3vw, 47px); line-height: 1.05; letter-spacing: -.045em; }
+    .small-copy { margin-top: 18px; color: var(--muted); font-size: clamp(15px, 1.35vw, 21px); line-height: 1.4; }
+    .dark .small-copy { color: #c7ddd0; }
+    .metric { margin-top: 4vh; padding: 26px 28px; background: var(--gold); color: var(--ink); }
+    .metric strong { display: block; font-size: clamp(28px, 3.2vw, 52px); line-height: 1; }
+    .metric span { display: block; margin-top: 10px; font-size: clamp(14px, 1.2vw, 18px); line-height: 1.25; }
+    .tech-list { display: grid; gap: 13px; margin-top: 3vh; padding: 0; list-style: none; }
+    .tech-list li { display: flex; gap: 14px; align-items: baseline; padding-bottom: 13px; border-bottom: 1px solid var(--line); font-size: clamp(17px, 1.5vw, 24px); }
+    .tech-list b { min-width: 108px; color: var(--gold); font-size: .72em; letter-spacing: .1em; text-transform: uppercase; }
+    .privacy { display: grid; gap: 15px; margin-top: 5vh; }
+    .privacy-item { display: flex; gap: 17px; align-items: flex-start; }
+    .privacy-icon { flex: 0 0 42px; width: 42px; height: 42px; border-radius: 50%; background: var(--mint); }
+    .privacy-item p { color: var(--muted); font-size: clamp(15px, 1.35vw, 21px); line-height: 1.35; }
+    .roadmap { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; margin-top: 6vh; }
+    .roadmap-step { min-height: 160px; padding: 22px; border-left: 5px solid var(--gold); background: rgba(255,255,255,.65); }
+    .roadmap-step h3 { margin-top: 22px; }
+    .roadmap-step p { margin-top: 10px; color: var(--muted); line-height: 1.35; }
+    .criteria { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: auto; }
+    .criteria div { padding-top: 11px; border-top: 2px solid var(--mint); color: #d0e1d5; font-size: clamp(11px, 1vw, 15px); line-height: 1.2; }
+    .controls { position: fixed; z-index: 10; right: 22px; bottom: 18px; display: flex; align-items: center; gap: 8px; padding: 7px; border: 1px solid rgba(22,61,59,.16); border-radius: 999px; background: rgba(255,253,247,.9); box-shadow: 0 9px 24px rgba(22,61,59,.14); }
+    .controls button { min-width: 40px; min-height: 40px; border: 0; border-radius: 50%; color: var(--cream); background: var(--ink); cursor: pointer; font-weight: 800; }
+    .controls button:hover, .controls button:focus-visible { background: var(--gold); color: var(--ink); outline: 3px solid rgba(217,167,44,.35); outline-offset: 2px; }
+    .controls .counter { min-width: 66px; color: var(--ink); text-align: center; font-size: 13px; font-weight: 850; }
+    .controls .print { padding: 0 14px; border-radius: 999px; }
+    @media (max-width: 760px) {
+      body { overflow: auto; }
+      .slide { height: auto; min-height: 100vh; padding: 30px 24px 74px; }
+      .slide:not(.is-active) { display: none; }
+      h1 { font-size: 44px; }
+      h2 { font-size: 34px; }
+      .split, .two-col { grid-template-columns: 1fr; gap: 30px; }
+      .flow, .shot-grid, .roadmap { grid-template-columns: 1fr; margin-top: 32px; }
+      .flow-step { min-height: 0; }
+      .flow-arrow { display: none; }
+      .shot.large { grid-row: auto; }
+      .shot { height: 260px; }
+      .criteria { grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 32px; }
+      .number { top: 30px; right: 24px; }
+    }
+    @media print {
+      @page { size: 16in 9in; margin: 0; }
+      html, body { background: white; overflow: visible; }
+      .deck { width: auto; height: auto; overflow: visible; }
+      .slide, .slide.is-active { display: block; width: 100vw; height: 56.25vw; min-height: 0; page-break-after: always; break-after: page; padding: 5.5vh 6.5vw 6.5vh; }
+      .slide:last-child { page-break-after: auto; break-after: auto; }
+      .controls { display: none; }
+      .slide::before { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+    }
+  </style>
+</head>
+<body>
+  <main class="deck" aria-label="Презентация SAUAT">
+    <section class="slide dark is-active" data-slide="1">
+      <div class="content title-slide">
+        <div class="wordmark"><span class="mark">S</span><span>SAUAT</span></div>
+        <div class="kicker" style="margin-top:9vh">Функциональная грамотность для 7–9 класса</div>
+        <h1>Читать мало.<br><span class="accent">Важно доказать.</span></h1>
+        <p class="lead">Игровые истории, где ученик читает фрагменты, проверяет вывод и учится отвечать с опорой на текст.</p>
+        <div class="meta"><span>MEms</span><span>офлайн-first</span><span>демо для жюри</span></div>
+        <p class="source">SAUAT · презентация продукта · 2026</p>
+      </div>
+      <div class="number">01</div>
+    </section>
+
+    <section class="slide" data-slide="2">
+      <div class="content">
+        <div class="kicker">Проблема</div>
+        <h2>Школьнику нужно перейти от «нашёл» к «обосновал»</h2>
+        <div class="split">
+          <div>
+            <p class="statement">Чтение становится функциональным, когда ответ связан с <span class="accent">конкретным фрагментом</span>, а гипотеза не маскируется под факт.</p>
+            <div class="stat-row"><span class="stat">36%</span><span class="stat-label">учащихся Казахстана достигли уровня 2 или выше по чтению в PISA 2025</span></div>
+          </div>
+          <div class="source-box">
+            <strong>Источник цифры</strong>
+            <p>OECD, PISA 2025 Results, Kazakhstan country note. Ссылка указана в `docs/sauat/SOURCES.md`.</p>
+            <p style="margin-top:14px"><a href="https://www.oecd.org/en/publications/pisa-2025-results-volume-i-country-notes_2d4ff9ea-en/kazakhstan_c01ae9c9-en.html">oecd.org · Kazakhstan</a></p>
+          </div>
+        </div>
+        <p class="source">Цифра приведена без пересчёта. Приложение не заявляет причинно-следственную связь между показателем и своим эффектом.</p>
+      </div>
+      <div class="number">02</div>
+    </section>
+
+    <section class="slide dark" data-slide="3">
+      <div class="content">
+        <div class="kicker">Идея SAUAT</div>
+        <h2>Карта приключений превращает чтение в короткую проверяемую миссию</h2>
+        <p class="lead">История даёт контекст. Ответ требует вывода. Доказательство возвращает ученика к тексту.</p>
+        <div class="two-col">
+          <div>
+            <p class="big-line">Один экран, одна мысль, один следующий шаг.</p>
+            <p class="small-copy">Без аккаунта, с локальным прогрессом и понятным маршрутом от документа к результату.</p>
+          </div>
+          <div class="metric"><strong>SAUAT</strong><span>Читай. Исследуй. Доказывай.</span></div>
+        </div>
+      </div>
+      <div class="number">03</div>
+    </section>
+
+    <section class="slide" data-slide="4">
+      <div class="content">
+        <div class="kicker">Как работает</div>
+        <h2>История → доказательство → ИИ-подсказка</h2>
+        <div class="flow">
+          <div class="flow-step"><span class="step-no">01</span><span class="flow-arrow">→</span><h3>История</h3><p>Короткие документы с ID и источниками. Сначала ученик читает контекст.</p></div>
+          <div class="flow-step"><span class="step-no">02</span><span class="flow-arrow">→</span><h3>Доказательство</h3><p>Ответ нужно подтвердить фрагментом. Первая попытка сохраняется отдельно.</p></div>
+          <div class="flow-step"><span class="step-no">03</span><h3>ИИ-подсказка</h3><p>Подсказка объясняет стратегию, а не выдаёт готовый ответ.</p></div>
+        </div>
+        <p class="source">В диагностике подсказки отключены, чтобы измерять навык чтения и доказательства.</p>
+      </div>
+      <div class="number">04</div>
+    </section>
+
+    <section class="slide" data-slide="5">
+      <div class="content">
+        <div class="kicker">Демо</div>
+        <h2>Ученик видит маршрут, задание и следующий шаг</h2>
+        <div class="shot-grid">
+          <figure class="shot large"><img src="../screens/a20-dist-map-360.png" alt="Карта SAUAT с тремя приключениями и диагностикой"><figcaption>Карта: 3 приключения, входная и итоговая диагностика</figcaption></figure>
+          <figure class="shot"><img src="../screens/a19-review-task-ru-360.png" alt="Задание с плашкой о проверке казахского текста"><figcaption>Задание и честный статус проверки</figcaption></figure>
+          <figure class="shot"><img src="../screens/a21-teacher-guide-360.png" alt="Экран инструкции для учителя"><figcaption>Короткая инструкция для учителя</figcaption></figure>
+        </div>
+        <a class="demo-link" href="../demo/demo.webm"><span>▶</span>Открыть локальное видео demo.webm</a>
+      </div>
+      <div class="number">05</div>
+    </section>
+
+    <section class="slide dark" data-slide="6">
+      <div class="content">
+        <div class="kicker">ИИ и офлайн</div>
+        <h2>ИИ помогает объяснить ход мысли, офлайн сохраняет маршрут</h2>
+        <div class="two-col">
+          <div>
+            <p class="big-line">Локальные правила остаются рабочим fallback.</p>
+            <p class="small-copy">При наличии локального Ollama приложение может получить структурированную подсказку. Если сети или модели нет, интерфейс использует правила и честно показывает офлайн-состояние.</p>
+          </div>
+          <ul class="tech-list">
+            <li><b>Локально</b><span>контент, прогресс и подсказки по правилам</span></li>
+            <li><b>ИИ</b><span>Ollama, только для подсказки стратегии</span></li>
+            <li><b>Офлайн</b><span>Service Worker и кэш истории</span></li>
+          </ul>
+        </div>
+      </div>
+      <div class="number">06</div>
+    </section>
+
+    <section class="slide" data-slide="7">
+      <div class="content">
+        <div class="kicker">Для учителя</div>
+        <h2>Кабинет отвечает на один практический вопрос: что понял ученик</h2>
+        <div class="split">
+          <div>
+            <p class="statement">Экспорт у ученика → импорт здесь.</p>
+            <p class="small-copy">Кабинет принимает JSON-файлы, удаляет дубликаты и показывает навыки по импортированным событиям.</p>
+          </div>
+          <div class="metric"><strong>Главная метрика</strong><span>Доля диагностических заданий, выполненных верно с первой попытки и без подсказок.</span></div>
+        </div>
+        <p class="source">Режим жюри не попадает в главную метрику кабинета.</p>
+      </div>
+      <div class="number">07</div>
+    </section>
+
+    <section class="slide" data-slide="8">
+      <div class="content">
+        <div class="kicker">Технологии</div>
+        <h2>Простой стек поддерживает проверяемый офлайн-сценарий</h2>
+        <div class="two-col">
+          <ul class="tech-list">
+            <li><b>Frontend</b><span>нативный HTML, CSS и ES-модули</span></li>
+            <li><b>Контент</b><span>JSON-манифест, истории и диагностика</span></li>
+            <li><b>PWA</b><span>manifest.webmanifest и Service Worker</span></li>
+            <li><b>Хранилище</b><span>IndexedDB для прогресса и событий</span></li>
+          </ul>
+          <div>
+            <p class="big-line">ИИ-инструменты</p>
+            <p class="small-copy">Ollama для локального наставника, правила подсказок для fallback, Claude для подготовки контента и QA, Playwright для браузерной проверки.</p>
+          </div>
+        </div>
+      </div>
+      <div class="number">08</div>
+    </section>
+
+    <section class="slide dark" data-slide="9">
+      <div class="content">
+        <div class="kicker">Безопасность и приватность</div>
+        <h2>Базовый сценарий не требует аккаунта и внешнего профиля ученика</h2>
+        <div class="privacy">
+          <div class="privacy-item"><span class="privacy-icon"></span><p>Прогресс хранится на устройстве ученика. Учитель получает только экспортированный файл.</p></div>
+          <div class="privacy-item"><span class="privacy-icon"></span><p>События анонимны: в данных нет имени ученика, только технический анонимный идентификатор.</p></div>
+          <div class="privacy-item"><span class="privacy-icon"></span><p>Импорт проверяет схему и дубликаты. Режим жюри отделяет демонстрационные события от главной метрики.</p></div>
+        </div>
+        <p class="source">Это описание текущего MVP, а не обещание полной школьной системы управления данными.</p>
+      </div>
+      <div class="number">09</div>
+    </section>
+
+    <section class="slide" data-slide="10">
+      <div class="content">
+        <div class="kicker">Команда MEms · дорожная карта</div>
+        <h2>Следующий шаг, не завышая готовность</h2>
+        <div class="roadmap">
+          <div class="roadmap-step"><span class="kicker">Сейчас</span><h3>Демо</h3><p>3 истории, диагностика, кабинет, PWA и офлайн-маршрут.</p></div>
+          <div class="roadmap-step"><span class="kicker">Дальше</span><h3>Пилот</h3><p>Провести пилот с учителями и учениками, собрать обратную связь и проверить метрики.</p></div>
+          <div class="roadmap-step"><span class="kicker">После пилота</span><h3>Масштаб</h3><p>Расширить банк историй, улучшить контентную модерацию и подготовить школьный контур.</p></div>
+        </div>
+        <div class="criteria">
+          <div><b>20</b><br>понимание проблемы</div>
+          <div><b>25</b><br>решение</div>
+          <div><b>25</b><br>техреализация</div>
+          <div><b>15</b><br>польза и масштаб</div>
+          <div><b>15</b><br>презентация</div>
+        </div>
+        <p class="source">Критерии жюри указаны в брифе задачи. Пилот остаётся следующим шагом, а не заявленным результатом.</p>
+      </div>
+      <div class="number">10</div>
+    </section>
+  </main>
+
+  <nav class="controls" aria-label="Навигация презентации">
+    <button id="prev" type="button" aria-label="Предыдущий слайд">←</button>
+    <span class="counter" id="counter">01 / 10</span>
+    <button id="next" type="button" aria-label="Следующий слайд">→</button>
+    <button class="print" id="print" type="button">Печать / PDF</button>
+  </nav>
+
+  <script>
+    (() => {
+      const slides = [...document.querySelectorAll('.slide')];
+      const counter = document.querySelector('#counter');
+      let current = 0;
+      function show(index) {
+        current = (index + slides.length) % slides.length;
+        slides.forEach((slide, i) => slide.classList.toggle('is-active', i === current));
+        counter.textContent = `${String(current + 1).padStart(2, '0')} / ${String(slides.length).padStart(2, '0')}`;
+        document.title = `SAUAT · ${String(current + 1).padStart(2, '0')} / ${slides.length}`;
+      }
+      window.goToSlide = (index) => show(Number(index) || 0);
+      document.querySelector('#prev').addEventListener('click', () => show(current - 1));
+      document.querySelector('#next').addEventListener('click', () => show(current + 1));
+      document.querySelector('#print').addEventListener('click', () => window.print());
+      document.addEventListener('keydown', (event) => {
+        if (['ArrowRight', 'PageDown', ' '].includes(event.key)) { event.preventDefault(); show(current + 1); }
+        if (['ArrowLeft', 'PageUp'].includes(event.key)) { event.preventDefault(); show(current - 1); }
+        if (event.key === 'Home') { event.preventDefault(); show(0); }
+        if (event.key === 'End') { event.preventDefault(); show(slides.length - 1); }
+      });
+      show(0);
+    })();
+  </script>
+</body>
+</html>
