@@ -23,8 +23,9 @@ story locked until the previous one is completed. `pack:site` rebuilds the demo
 and creates `dist.zip` next to `dist/`; the archive uses `/` entry separators
 and is rejected above 20 MiB.
 
-The build copies the public shell, selected content and a generated
-`content/manifest.json`. The ordinary build excludes drafts and fixtures;
+The build copies the current static shell, selected content and a generated
+`content/manifest.json`; obsolete legacy login assets are intentionally excluded
+from the upload package. The ordinary build excludes drafts and fixtures;
 `build:demo` intentionally includes the seven current draft stories. The static bundle does not need
 Node, Express or Ollama at runtime: hints use the local rules, progress and
 events stay on the device, and the export button downloads JSON.

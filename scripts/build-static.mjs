@@ -231,6 +231,7 @@ const manifest = createManifest({ includeDraft, includeFixture: false });
 const cacheVersion = cacheVersionFor(manifest);
 fs.rmSync(distRoot, { recursive: true, force: true });
 fs.cpSync(publicRoot, distRoot, { recursive: true });
+for (const legacyFile of ['legacy.html', 'app.js', 'styles.css']) fs.rmSync(path.join(distRoot, legacyFile), { force: true });
 fs.mkdirSync(path.join(distRoot, 'content'), { recursive: true });
 write(path.join(distRoot, 'content', 'manifest.json'), `${JSON.stringify(manifest, null, 2)}\n`);
 
@@ -239,7 +240,6 @@ for (const story of manifest.stories) {
 }
 
 write(path.join(distRoot, 'index.html'), relativeHtml(fs.readFileSync(path.join(publicRoot, 'index.html'), 'utf8')));
-write(path.join(distRoot, 'legacy.html'), relativeHtml(fs.readFileSync(path.join(publicRoot, 'legacy.html'), 'utf8')));
 const webManifest = JSON.parse(fs.readFileSync(path.join(publicRoot, 'manifest.webmanifest'), 'utf8'));
 webManifest.start_url = './';
 for (const icon of webManifest.icons || []) icon.src = `./${String(icon.src).replace(/^\/+/, '')}`;

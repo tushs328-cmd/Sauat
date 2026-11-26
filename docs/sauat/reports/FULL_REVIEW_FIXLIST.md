@@ -18,6 +18,8 @@
       дедупликация, максимум 500 событий и 2 MiB на файл.
 - [x] Добавить targeted tests для ZIP, demo gating, jury isolation contract,
       relative assets и cache-version guard.
+- [x] Не включать старую legacy-страницу с входом и API-кнопками в публичный
+      static package; текущий entrypoint работает без регистрации и сервера.
 - [x] Обновить submission/deploy/AI документы без заявлений о пилоте, human KK или
       public Ollama.
 

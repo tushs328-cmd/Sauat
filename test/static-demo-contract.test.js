@@ -21,6 +21,9 @@ test('demo build keeps ordinary progression, jury opt-in, relative assets and ve
     const serviceWorker = fs.readFileSync(path.join(output, 'sw.js'), 'utf8');
     assert.match(index, /href="\.\/sauat\.css"/);
     assert.match(index, /src="\.\/js\/main\.js"/);
+    assert.equal(fs.existsSync(path.join(output, 'legacy.html')), false);
+    assert.equal(fs.existsSync(path.join(output, 'app.js')), false);
+    assert.equal(fs.existsSync(path.join(output, 'styles.css')), false);
     assert.deepEqual(webManifest.icons.map((icon) => icon.src), ['./icons/icon-192.svg', './icons/icon-512.svg']);
     assert.doesNotMatch(main, /if \(demoMode \|\| devMode \|\| state\.juryMode\)/);
     assert.match(main, /if \(devMode \|\| state\.juryMode\) return true/);
