@@ -1,0 +1,397 @@
+{
+  "summary": {
+    "scenarios": 12,
+    "aiResponses": 0,
+    "modelMatchesExpected": 12,
+    "ruleMatchesExpected": 12,
+    "modelEqualsRule": 12,
+    "levelsOk": 12,
+    "hintIdValid": 12,
+    "nextTaskValid": 12,
+    "decisionFreedom": 6,
+    "latencyMedianMs": null,
+    "latencyMaxMs": null,
+    "firstCallMs": 0,
+    "model": "qwen2.5:1.5b"
+  },
+  "rows": [
+    {
+      "lang": "ru",
+      "profile": "answer-error",
+      "expected": "locate",
+      "expectedLevel": 1,
+      "targetLevel": 1,
+      "allowedStrategies": [
+        "compare",
+        "locate"
+      ],
+      "allowedHintIds": [
+        "t2_h1"
+      ],
+      "model": {
+        "source": "rules",
+        "strategy": "locate",
+        "hintId": "t2_h1",
+        "nextTaskId": "t3"
+      },
+      "rule": {
+        "strategy": "locate",
+        "hintId": "t2_h1",
+        "nextTaskId": "t3"
+      },
+      "modelMatchesExpected": true,
+      "ruleMatchesExpected": true,
+      "levelOk": true,
+      "hintOk": true,
+      "taskOk": true,
+      "ms": 0,
+      "raw": ""
+    },
+    {
+      "lang": "ru",
+      "profile": "evidence-error",
+      "expected": "compare",
+      "expectedLevel": 1,
+      "targetLevel": 1,
+      "allowedStrategies": [
+        "compare"
+      ],
+      "allowedHintIds": [
+        "t2_h1"
+      ],
+      "model": {
+        "source": "rules",
+        "strategy": "compare",
+        "hintId": "t2_h1",
+        "nextTaskId": "t3"
+      },
+      "rule": {
+        "strategy": "compare",
+        "hintId": "t2_h1",
+        "nextTaskId": "t3"
+      },
+      "modelMatchesExpected": true,
+      "ruleMatchesExpected": true,
+      "levelOk": true,
+      "hintOk": true,
+      "taskOk": true,
+      "ms": 0,
+      "raw": ""
+    },
+    {
+      "lang": "ru",
+      "profile": "both-errors",
+      "expected": "locate",
+      "expectedLevel": 1,
+      "targetLevel": 1,
+      "allowedStrategies": [
+        "compare",
+        "locate"
+      ],
+      "allowedHintIds": [
+        "t2_h1"
+      ],
+      "model": {
+        "source": "rules",
+        "strategy": "locate",
+        "hintId": "t2_h1",
+        "nextTaskId": "t3"
+      },
+      "rule": {
+        "strategy": "locate",
+        "hintId": "t2_h1",
+        "nextTaskId": "t3"
+      },
+      "modelMatchesExpected": true,
+      "ruleMatchesExpected": true,
+      "levelOk": true,
+      "hintOk": true,
+      "taskOk": true,
+      "ms": 0,
+      "raw": ""
+    },
+    {
+      "lang": "ru",
+      "profile": "repeat-same-error",
+      "expected": "locate",
+      "expectedLevel": 3,
+      "targetLevel": 3,
+      "allowedStrategies": [
+        "compare",
+        "locate"
+      ],
+      "allowedHintIds": [
+        "t2_h3"
+      ],
+      "model": {
+        "source": "rules",
+        "strategy": "locate",
+        "hintId": "t2_h3",
+        "nextTaskId": "t3"
+      },
+      "rule": {
+        "strategy": "locate",
+        "hintId": "t2_h3",
+        "nextTaskId": "t3"
+      },
+      "modelMatchesExpected": true,
+      "ruleMatchesExpected": true,
+      "levelOk": true,
+      "hintOk": true,
+      "taskOk": true,
+      "ms": 0,
+      "raw": ""
+    },
+    {
+      "lang": "ru",
+      "profile": "hint-heavy",
+      "expected": "compare",
+      "expectedLevel": 3,
+      "targetLevel": 3,
+      "allowedStrategies": [
+        "compare"
+      ],
+      "allowedHintIds": [
+        "t2_h3"
+      ],
+      "model": {
+        "source": "rules",
+        "strategy": "compare",
+        "hintId": "t2_h3",
+        "nextTaskId": "t3"
+      },
+      "rule": {
+        "strategy": "compare",
+        "hintId": "t2_h3",
+        "nextTaskId": "t3"
+      },
+      "modelMatchesExpected": true,
+      "ruleMatchesExpected": true,
+      "levelOk": true,
+      "hintOk": true,
+      "taskOk": true,
+      "ms": 0,
+      "raw": ""
+    },
+    {
+      "lang": "ru",
+      "profile": "independent-success",
+      "expected": "compare",
+      "expectedLevel": 1,
+      "targetLevel": 1,
+      "allowedStrategies": [
+        "compare"
+      ],
+      "allowedHintIds": [
+        "t2_h1"
+      ],
+      "model": {
+        "source": "rules",
+        "strategy": "compare",
+        "hintId": "t2_h1",
+        "nextTaskId": "t3"
+      },
+      "rule": {
+        "strategy": "compare",
+        "hintId": "t2_h1",
+        "nextTaskId": "t3"
+      },
+      "modelMatchesExpected": true,
+      "ruleMatchesExpected": true,
+      "levelOk": true,
+      "hintOk": true,
+      "taskOk": true,
+      "ms": 0,
+      "raw": ""
+    },
+    {
+      "lang": "kk",
+      "profile": "answer-error",
+      "expected": "locate",
+      "expectedLevel": 1,
+      "targetLevel": 1,
+      "allowedStrategies": [
+        "compare",
+        "locate"
+      ],
+      "allowedHintIds": [
+        "t2_h1"
+      ],
+      "model": {
+        "source": "rules",
+        "strategy": "locate",
+        "hintId": "t2_h1",
+        "nextTaskId": "t3"
+      },
+      "rule": {
+        "strategy": "locate",
+        "hintId": "t2_h1",
+        "nextTaskId": "t3"
+      },
+      "modelMatchesExpected": true,
+      "ruleMatchesExpected": true,
+      "levelOk": true,
+      "hintOk": true,
+      "taskOk": true,
+      "ms": 0,
+      "raw": ""
+    },
+    {
+      "lang": "kk",
+      "profile": "evidence-error",
+      "expected": "compare",
+      "expectedLevel": 1,
+      "targetLevel": 1,
+      "allowedStrategies": [
+        "compare"
+      ],
+      "allowedHintIds": [
+        "t2_h1"
+      ],
+      "model": {
+        "source": "rules",
+        "strategy": "compare",
+        "hintId": "t2_h1",
+        "nextTaskId": "t3"
+      },
+      "rule": {
+        "strategy": "compare",
+        "hintId": "t2_h1",
+        "nextTaskId": "t3"
+      },
+      "modelMatchesExpected": true,
+      "ruleMatchesExpected": true,
+      "levelOk": true,
+      "hintOk": true,
+      "taskOk": true,
+      "ms": 0,
+      "raw": ""
+    },
+    {
+      "lang": "kk",
+      "profile": "both-errors",
+      "expected": "locate",
+      "expectedLevel": 1,
+      "targetLevel": 1,
+      "allowedStrategies": [
+        "compare",
+        "locate"
+      ],
+      "allowedHintIds": [
+        "t2_h1"
+      ],
+      "model": {
+        "source": "rules",
+        "strategy": "locate",
+        "hintId": "t2_h1",
+        "nextTaskId": "t3"
+      },
+      "rule": {
+        "strategy": "locate",
+        "hintId": "t2_h1",
+        "nextTaskId": "t3"
+      },
+      "modelMatchesExpected": true,
+      "ruleMatchesExpected": true,
+      "levelOk": true,
+      "hintOk": true,
+      "taskOk": true,
+      "ms": 0,
+      "raw": ""
+    },
+    {
+      "lang": "kk",
+      "profile": "repeat-same-error",
+      "expected": "locate",
+      "expectedLevel": 3,
+      "targetLevel": 3,
+      "allowedStrategies": [
+        "compare",
+        "locate"
+      ],
+      "allowedHintIds": [
+        "t2_h3"
+      ],
+      "model": {
+        "source": "rules",
+        "strategy": "locate",
+        "hintId": "t2_h3",
+        "nextTaskId": "t3"
+      },
+      "rule": {
+        "strategy": "locate",
+        "hintId": "t2_h3",
+        "nextTaskId": "t3"
+      },
+      "modelMatchesExpected": true,
+      "ruleMatchesExpected": true,
+      "levelOk": true,
+      "hintOk": true,
+      "taskOk": true,
+      "ms": 0,
+      "raw": ""
+    },
+    {
+      "lang": "kk",
+      "profile": "hint-heavy",
+      "expected": "compare",
+      "expectedLevel": 3,
+      "targetLevel": 3,
+      "allowedStrategies": [
+        "compare"
+      ],
+      "allowedHintIds": [
+        "t2_h3"
+      ],
+      "model": {
+        "source": "rules",
+        "strategy": "compare",
+        "hintId": "t2_h3",
+        "nextTaskId": "t3"
+      },
+      "rule": {
+        "strategy": "compare",
+        "hintId": "t2_h3",
+        "nextTaskId": "t3"
+      },
+      "modelMatchesExpected": true,
+      "ruleMatchesExpected": true,
+      "levelOk": true,
+      "hintOk": true,
+      "taskOk": true,
+      "ms": 0,
+      "raw": ""
+    },
+    {
+      "lang": "kk",
+      "profile": "independent-success",
+      "expected": "compare",
+      "expectedLevel": 1,
+      "targetLevel": 1,
+      "allowedStrategies": [
+        "compare"
+      ],
+      "allowedHintIds": [
+        "t2_h1"
+      ],
+      "model": {
+        "source": "rules",
+        "strategy": "compare",
+        "hintId": "t2_h1",
+        "nextTaskId": "t3"
+      },
+      "rule": {
+        "strategy": "compare",
+        "hintId": "t2_h1",
+        "nextTaskId": "t3"
+      },
+      "modelMatchesExpected": true,
+      "ruleMatchesExpected": true,
+      "levelOk": true,
+      "hintOk": true,
+      "taskOk": true,
+      "ms": 0,
+      "raw": ""
+    }
+  ]
+}

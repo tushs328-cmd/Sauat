@@ -53,8 +53,9 @@ export function getMentorContext({ storyId, taskId, errorProfile }) {
 }
 
 function strategyFor(task, errorProfile) {
-  if (errorProfile.evidenceWrong) return task.type === 'claim_check' ? 'check_contradiction' : 'compare';
+  // Если ошибочны и ответ, и доказательство, сначала возвращаем ученика к исходному факту (locate).
   if (errorProfile.answerWrong) return 'locate';
+  if (errorProfile.evidenceWrong) return task.type === 'claim_check' ? 'check_contradiction' : 'compare';
   return 'compare';
 }
 
