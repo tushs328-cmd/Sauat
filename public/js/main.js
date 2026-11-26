@@ -46,9 +46,16 @@ function reviewBanner(story) {
 }
 function taskTotals(story) {
   const total = story?.tasks?.length || 0;
-  const solved = story?.tasks?.filter((task) => taskProgress(state.progress, story.id, task.id).solved).length || 0;
-  const xp = story?.kind === 'practice' ? story.tasks.reduce((sum, task) => sum + Number(taskProgress(state.progress, story.id, task.id).xpEarned || 0), 0) : 0;
+  const progress = state.juryMode && state.juryProgress ? state.juryProgress : state.progress;
+  const solved = story?.tasks?.filter((task) => taskProgress(progress, story.id, task.id).solved).length || 0;
+  const xp = story?.kind === 'practice' ? story.tasks.reduce((sum, task) => sum + Number(taskProgress(progress, story.id, task.id).xpEarned || 0), 0) : 0;
   return { total, solved, xp };
+}
+function journeyTotals() {
+  const stories = practiceStories();
+  const tasks = stories.flatMap((story) => (story.tasks || []).map((task) => ({ story, task })));
+  const solved = tasks.filter(({ story, task }) => taskProgress(state.progress, story.id, task.id).solved).length;
+  return { storiesDone: stories.filter((story) => state.progress.completedStories.includes(story.id)).length, storiesTotal: stories.length, tasksDone: solved, tasksTotal: tasks.length, xp: state.progress.xp };
 }
 function storyUnlocked(story) {
   if (!story) return false;
@@ -66,8 +73,24 @@ function storyUnlocked(story) {
 function render() {
   if (!state.story && !['onboarding', 'results', 'error', 'about', 'project'].includes(state.view)) state.view = 'map';
   app.innerHTML = state.view === 'onboarding' ? onboarding() : state.view === 'map' ? map() : state.view === 'story' ? storyIntro() : state.view === 'task' ? taskScreen() : state.view === 'reveal' ? reveal() : state.view === 'diagnostic-complete' ? diagnosticComplete() : state.view === 'about' ? aboutScreen() : state.view === 'project' ? projectScreen() : state.view === 'teacher-guide' ? teacherGuideScreen() : state.view === 'error' ? errorScreen() : results();
+  if (state.view === 'map') {
+    const totals = journeyTotals();
+    app.querySelector('.map-heading')?.insertAdjacentHTML('afterend', `<div class="map-progress-strip" aria-label="${esc(t('progress'))}"><span><strong>${totals.storiesDone}/${totals.storiesTotal}</strong> ${esc(t('progressStories'))}</span><span><strong>${totals.tasksDone}/${totals.tasksTotal}</strong> ${esc(t('progressTasks'))}</span><span class="map-reward"><strong>${totals.xp} XP</strong> ${esc(t('rewardTease'))}</span></div>`);
+  }
+  if (state.view === 'reveal') app.querySelector('.sources-card')?.insertAdjacentHTML('beforebegin', storySummaryMarkup());
   bind();
   document.querySelectorAll('.story-image img, .hero-image img, .reveal-image img').forEach((image) => image.addEventListener('error', () => { image.hidden = true; image.parentElement.classList.add('missing'); image.parentElement.querySelector('.story-placeholder')?.removeAttribute('hidden'); }));
+}
+
+function storySummaryMarkup() {
+  const progress = state.juryMode && state.juryProgress ? state.juryProgress : state.progress;
+  const evidenceById = new Map(state.story.documents.flatMap((doc) => doc.segments).map((segment) => [segment.id, segment]));
+  const rows = state.story.tasks.map((task, index) => {
+    const entry = taskProgress(progress, state.story.id, task.id); const evidence = (entry.selectedEvidenceIds || []).map((id) => evidenceById.get(id)).filter(Boolean); const first = entry.firstTry || {};
+    return `<article class="summary-row"><div class="summary-row-head"><span class="summary-index">${String(index + 1).padStart(2, '0')}</span><strong>${esc(taskLabel(task, dictionary(state.lang)))}</strong><span class="summary-status ${first.complete ? 'is-good' : 'needs-repeat'}">${esc(first.complete ? t('summaryFound') : t('summaryRepeat'))}</span></div><p>${esc(text(task.question))}</p><div class="summary-evidence"><span>${esc(t('summaryEvidenceTitle'))}</span><p>${evidence.length ? evidence.map((segment) => `${esc(segment.id)} · ${esc(text(segment.text))}`).join('<br>') : esc(t('noEvidenceSelected'))}</p></div></article>`;
+  }).join('');
+  const repeat = state.story.tasks.filter((task) => !taskProgress(progress, state.story.id, task.id).firstTry?.complete);
+  return `<section class="story-summary"><div class="eyebrow">${esc(t('storySummary'))}</div><h2>${esc(t('summaryFoundTitle'))}</h2><p class="summary-intro">${esc(t('summaryIntro'))}</p><div class="summary-list">${rows}</div><section class="repeat-card"><h3>${esc(t('repeatTitle'))}</h3>${repeat.length ? `<ul>${repeat.map((task) => `<li>${esc(text(task.question))}</li>`).join('')}</ul>` : `<p>${esc(t('repeatNone'))}</p>`}</section></section>`;
 }
 
 function onboarding() {
@@ -174,7 +197,7 @@ async function action(name, storyId) {
 }
 async function submitTask() {
   const task = state.story.tasks[state.taskIndex]; if (state.story.kind === 'diagnostic' && state.feedback) return;
-  const progress = state.juryMode ? (state.juryProgress ||= structuredClone(state.progress)) : state.progress; const result = evaluateTask(task, state.selectedOptions, state.selectedEvidence); const entry = await recordAttempt(progress, state.story, task, result, { persist: !state.juryMode }); state.feedback = { ...result, firstAttempt: entry.isFirstAttempt }; state.hint = null;
+  const progress = state.juryMode ? (state.juryProgress ||= structuredClone(state.progress)) : state.progress; const result = evaluateTask(task, state.selectedOptions, state.selectedEvidence); const entry = await recordAttempt(progress, state.story, task, result, { persist: !state.juryMode, selectedOptions: state.selectedOptions, selectedEvidence: state.selectedEvidence }); state.feedback = { ...result, firstAttempt: entry.isFirstAttempt }; state.hint = null;
   const event = { eventId: globalThis.crypto?.randomUUID?.() || `event-${Date.now()}-${Math.random().toString(16).slice(2)}`, anonId: await getAnonId(), ts: new Date().toISOString(), contentVersion: state.manifest?.contentVersion || state.story.contentVersion, storyId: state.story.id, taskId: task.id, skill: task.skill, mode: state.juryMode ? 'jury' : state.story.kind, attempt: entry.attempts, answerCorrect: result.answerCorrect, evidenceCorrect: result.evidenceCorrect, hintsUsed: entry.hintsUsed, firstTry: entry.isFirstAttempt, lang: state.lang, mentorSource: state.story.kind === 'diagnostic' ? 'none' : state.mentorSource };
   await queueEvent(event); flushPendingEvents(); render();
 }

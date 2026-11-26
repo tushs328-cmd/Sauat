@@ -79,13 +79,13 @@ export function taskProgress(progress, storyId, taskId) {
   return progress.tasks[`${storyId}:${taskId}`] || { attempts: 0, hintsUsed: 0, firstTry: null, xpAwarded: false, xpEarned: 0, solved: false };
 }
 
-export async function recordAttempt(progress, story, task, result, { persist = true } = {}) {
+export async function recordAttempt(progress, story, task, result, { persist = true, selectedOptions = [], selectedEvidence = [] } = {}) {
   const key = `${story.id}:${task.id}`;
   const previous = taskProgress(progress, story.id, task.id);
   const isFirstAttempt = previous.attempts === 0;
   const earnedBefore = Number(previous.xpEarned || (previous.xpAwarded ? 25 : 0));
   const earnedNow = story.kind === 'practice' && result.complete && !previous.xpAwarded ? 25 : 0;
-  const entry = { ...previous, attempts: previous.attempts + 1, firstTry: previous.firstTry ?? { ...result }, solved: previous.solved || result.complete, xpAwarded: previous.xpAwarded || earnedNow > 0, xpEarned: earnedBefore + earnedNow };
+  const entry = { ...previous, attempts: previous.attempts + 1, firstTry: previous.firstTry ?? { ...result }, selectedOptionIds: [...selectedOptions], selectedEvidenceIds: [...selectedEvidence], solved: previous.solved || result.complete, xpAwarded: previous.xpAwarded || earnedNow > 0, xpEarned: earnedBefore + earnedNow };
   progress.xp += earnedNow;
   progress.tasks[key] = entry;
   progress.history.push({ storyId: story.id, taskId: task.id, ...result, hintsUsed: entry.hintsUsed, firstTry: isFirstAttempt, ts: new Date().toISOString() });
