@@ -166,7 +166,7 @@ test('events deduplicate, import safely and calculate main metric', async () => 
   assert.deepEqual(duplicate.body, { accepted: 0, duplicates: 1, rejected: 0 });
 
   const teacher = login({ role: 'teacher', classCode: 'USTAZ7' });
-  const event2 = { ...event, eventId: 'event-2', anonId: 'anon-b', taskId: 't2', skill: 'infer', mode: 'diagnostic', evidenceCorrect: true, mentorSource: 'rules' };
+  const event2 = { ...event, eventId: 'event-2', anonId: 'anon-b', taskId: 't2', skill: 'infer', mode: 'diagnostic', evidenceCorrect: true, mentorSource: 'rules', errorType: 'fact_not_found' };
   const imported = await request('/api/teacher/import', { method: 'POST', headers: { 'x-session-token': teacher.sessionId }, body: JSON.stringify({ events: [event2] }) });
   assert.deepEqual(imported.body, { accepted: 1, duplicates: 0, rejected: 0 });
   const entryEvent = { ...event, eventId: 'event-3', anonId: 'anon-c', storyId: 'diag_entry', answerCorrect: false, mode: 'diagnostic' };
@@ -189,6 +189,12 @@ test('events deduplicate, import safely and calculate main metric', async () => 
   assert.equal(summary.body.learners, 3);
   const exported = await request('/api/teacher/export', { headers: { 'x-session-token': teacher.sessionId } });
   assert.equal(exported.body.events.length, 4);
+  const csv = await request('/api/teacher/export.csv', { headers: { 'x-session-token': teacher.sessionId } });
+  assert.match(csv.body, /Навык/);
+  assert.match(csv.body, /firstTry/);
+  assert.match(csv.body, /errorType/);
+  assert.match(csv.body, /fact_not_found/);
+  assert.doesNotMatch(csv.body, /Имя|Класс|anon-a|anon-b/);
 
   const form = new FormData();
   form.append('file', new Blob(['{ broken'], { type: 'application/json' }), 'broken.json');

@@ -1,4 +1,4 @@
-const allowedEventKeys = new Set(['eventId', 'anonId', 'ts', 'contentVersion', 'storyId', 'taskId', 'skill', 'mode', 'attempt', 'answerCorrect', 'evidenceCorrect', 'hintsUsed', 'firstTry', 'lang', 'mentorSource']);
+const allowedEventKeys = new Set(['eventId', 'anonId', 'ts', 'contentVersion', 'storyId', 'taskId', 'skill', 'mode', 'attempt', 'answerCorrect', 'evidenceCorrect', 'hintsUsed', 'firstTry', 'lang', 'mentorSource', 'errorType']);
 const skills = ['find', 'infer', 'evidence'];
 
 function isObject(value) {
@@ -36,6 +36,7 @@ export function validateEvent(event) {
   if (typeof event.firstTry !== 'boolean') errors.push(eventError('/firstTry', 'нужно boolean'));
   if (!['kk', 'ru'].includes(event.lang)) errors.push(eventError('/lang', 'допустимы kk и ru'));
   if (!['ai', 'rules', 'none'].includes(event.mentorSource)) errors.push(eventError('/mentorSource', 'допустимы ai, rules и none'));
+  if ('errorType' in event && event.errorType !== null && (typeof event.errorType !== 'string' || !/^[a-z0-9_:-]{1,80}$/i.test(event.errorType))) errors.push(eventError('/errorType', 'нужен короткий безопасный тип ошибки'));
   return { valid: errors.length === 0, errors };
 }
 

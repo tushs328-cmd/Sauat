@@ -265,10 +265,10 @@ export function createApp({ dataPath = defaultDataPath, mentorContextResolver = 
   });
 
   app.get('/api/teacher/export.csv', requireAuth('teacher'), (req, res) => {
-    const rows = [['Имя', 'Класс', 'Навык', 'Предмет', 'Верно', 'Дата'], ...storage.read().attempts.map((a) => [a.studentName, a.classId, a.skill, a.subject, a.correct ? 'да' : 'нет', a.createdAt.slice(0, 10)])];
+    const rows = [['Навык', 'firstTry', 'errorType'], ...(storage.read().events || []).map((event) => [event.skill, event.firstTry ? 'true' : 'false', event.errorType || ''])];
     const csv = rows.map((row) => row.map((cell) => `"${String(cell).replaceAll('"', '""')}"`).join(';')).join('\n');
     res.set('Content-Type', 'text/csv; charset=utf-8');
-    res.set('Content-Disposition', 'attachment; filename="saulat-progress.csv"');
+    res.set('Content-Disposition', 'attachment; filename="saulat-anonymous-events.csv"');
     res.send(`\uFEFF${csv}`);
   });
 

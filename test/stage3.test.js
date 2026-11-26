@@ -62,6 +62,8 @@ test('CSV экспорт защищён ролью и содержит заго�
   const teacher = login({ role: 'teacher', classCode: 'USTAZ7' });
   const csv = await request('/api/teacher/export.csv', { headers: { 'x-session-token': teacher.sessionId } });
   assert.equal(csv.response.status, 200);
-  assert.match(csv.body, /Имя/);
   assert.match(csv.body, /Навык/);
+  assert.match(csv.body, /firstTry/);
+  assert.match(csv.body, /errorType/);
+  assert.doesNotMatch(csv.body, /Имя|Класс/);
 });
