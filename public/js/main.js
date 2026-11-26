@@ -2,11 +2,12 @@ import { dictionary } from './i18n/index.js';
 import { loadContent } from './content.js';
 import { evaluateTask, nextHint, taskLabel } from './engine.js';
 import { prepareOffline } from './offline.js';
-import { exportEvents, finishOnboarding, flushEvents, getAnonId, hasOnboarded, importTeacherEvents, loadLanguage, loadProgress, loadTeacherEvents, queueEvent, recordAttempt, recordHint, resetProgress, saveLanguage, taskProgress } from './storage.js';
+import { clearDraft, exportEvents, finishOnboarding, flushEvents, getAnonId, hasOnboarded, importTeacherEvents, loadDraft, loadLanguage, loadProgress, loadTeacherEvents, queueEvent, recordAttempt, recordHint, resetProgress, saveDraft, saveLanguage, taskProgress } from './storage.js';
 
 const params = new URLSearchParams(location.search);
 const devMode = params.get('dev') === '1';
 const demoMode = globalThis.__SAULAT_STATIC__ === true;
+let historyArmed = false;
 const state = {
   lang: loadLanguage(), view: hasOnboarded() ? 'map' : 'onboarding', stories: [], story: null, manifest: null,
   taskIndex: 0, selectedOptions: [], selectedEvidence: [], feedback: null, hint: null, mentorState: 'none', mentorSource: 'none',
@@ -90,6 +91,8 @@ function storyUnlocked(story) {
 function render() {
   if (!state.story && !['onboarding', 'results', 'error', 'about', 'project'].includes(state.view)) state.view = 'map';
   app.innerHTML = state.view === 'onboarding' ? onboarding() : state.view === 'map' ? map() : state.view === 'story' ? storyIntro() : state.view === 'task' ? taskScreen() : state.view === 'reveal' ? reveal() : state.view === 'diagnostic-complete' ? diagnosticComplete() : state.view === 'about' ? aboutScreen() : state.view === 'project' ? projectScreen() : state.view === 'teacher-guide' ? teacherGuideScreen() : state.view === 'error' ? errorScreen() : results();
+  const skipLink = document.querySelector('.skip-link');
+  if (skipLink) skipLink.textContent = t('skipToGame');
   if (state.view === 'map') {
     const totals = journeyTotals();
     app.querySelector('.map-heading')?.insertAdjacentHTML('afterend', `<div class="map-progress-strip" aria-label="${esc(t('progress'))}"><span><strong>${totals.storiesDone}/${totals.storiesTotal}</strong> ${esc(t('progressStories'))}</span><span><strong>${totals.tasksDone}/${totals.tasksTotal}</strong> ${esc(t('progressTasks'))}</span><span class="map-reward"><strong>${totals.xp} XP</strong> ${esc(t('rewardTease'))}</span></div>`);
@@ -97,6 +100,13 @@ function render() {
   if (state.view === 'reveal') app.querySelector('.sources-card')?.insertAdjacentHTML('beforebegin', storySummaryMarkup());
   bind();
   document.querySelectorAll('.story-image img, .hero-image img, .reveal-image img').forEach((image) => image.addEventListener('error', () => { image.hidden = true; image.parentElement.classList.add('missing'); image.parentElement.querySelector('.story-placeholder')?.removeAttribute('hidden'); }));
+  if (state.view === 'story' || state.view === 'task') saveDraft({ view: state.view, storyId: state.story?.id, taskIndex: state.taskIndex, selectedOptions: state.selectedOptions, selectedEvidence: state.selectedEvidence, feedback: state.feedback, hint: state.hint, mentorState: state.mentorState, mentorSource: state.mentorSource });
+}
+function armAppHistory() {
+  if (historyArmed) return;
+  history.replaceState({ saulat: true, view: state.view }, '', location.href);
+  history.pushState({ saulat: true, guard: true }, '', location.href);
+  historyArmed = true;
 }
 
 function storySummaryMarkup() {
@@ -220,7 +230,7 @@ function bind() {
 async function action(name, storyId) {
   if (name === 'toggle-lang') { state.lang = state.lang === 'ru' ? 'kk' : 'ru'; saveLanguage(state.lang); return render(); }
   if (name === 'onboard') { finishOnboarding(); state.view = 'map'; return render(); }
-  if (name === 'map') { state.view = 'map'; state.story = heroStory(); state.feedback = null; return render(); }
+  if (name === 'map') { clearDraft(); state.view = 'map'; state.story = heroStory(); state.feedback = null; return render(); }
   if (name === 'results') { state.view = 'results'; state.teacherEvents = await loadTeacherEvents(); return render(); }
   if (name === 'about' || name === 'project') { state.view = name; return render(); }
   if (name === 'teacher-guide') { state.view = 'teacher-guide'; return render(); }
@@ -233,7 +243,7 @@ async function action(name, storyId) {
   if (name === 'submit') return submitTask();
   if (name === 'hint') return showHint();
   if (name === 'advance') { if (state.taskIndex === state.story.tasks.length - 1) state.view = state.story.kind === 'diagnostic' ? 'diagnostic-complete' : 'reveal'; else { state.taskIndex += 1; state.selectedOptions = []; state.selectedEvidence = []; state.feedback = null; state.hint = null; state.mentorState = 'none'; state.mentorSource = 'none'; } return render(); }
-  if (name === 'reset' && window.confirm(t('resetConfirm'))) { await resetProgress(); state.progress = await loadProgress(); state.view = 'onboarding'; state.feedback = null; return render(); }
+  if (name === 'reset' && window.confirm(t('resetConfirm'))) { await resetProgress(); clearDraft(); state.progress = await loadProgress(); state.view = 'onboarding'; state.feedback = null; return render(); }
 }
 async function submitTask() {
   const task = state.story.tasks[state.taskIndex]; if (state.story.kind === 'diagnostic' && state.feedback) return;
@@ -255,9 +265,24 @@ async function importFiles(files) {
   state.teacherEvents = await loadTeacherEvents(); state.importMessage = messages.join(' · '); render();
 }
 async function init() {
-  try { state.progress = await loadProgress(); const bundle = await loadContent(); state.manifest = bundle.manifest; state.stories = bundle.stories; state.story = heroStory(); state.teacherEvents = await loadTeacherEvents(); state.offlineReady = await prepareOffline(state.manifest); state.offlineState = state.offlineReady ? 'ready' : 'error'; render(); flushPendingEvents(); }
+  try {
+    state.progress = await loadProgress(); const bundle = await loadContent(); state.manifest = bundle.manifest; state.stories = bundle.stories; state.story = heroStory();
+    const draft = loadDraft(); const draftStory = draft && state.stories.find((story) => story.id === draft.storyId);
+    if (draftStory && (draft.view === 'story' || draft.view === 'task')) {
+      state.story = draftStory; state.view = draft.view; state.taskIndex = Math.min(Math.max(0, Number(draft.taskIndex) || 0), Math.max(0, draftStory.tasks.length - 1));
+      state.selectedOptions = Array.isArray(draft.selectedOptions) ? draft.selectedOptions : []; state.selectedEvidence = Array.isArray(draft.selectedEvidence) ? draft.selectedEvidence : [];
+      state.feedback = draft.feedback || null; state.hint = draft.hint || null; state.mentorState = draft.mentorState || 'none'; state.mentorSource = draft.mentorSource || 'none';
+    } else if (draft) clearDraft();
+    state.teacherEvents = await loadTeacherEvents(); state.offlineReady = await prepareOffline(state.manifest); state.offlineState = state.offlineReady ? 'ready' : 'error'; render(); flushPendingEvents();
+  }
   catch (error) { state.offlineState = 'error'; state.errorMessage = error.message || t('contentErrorText'); state.view = 'error'; state.story = null; render(); }
 }
 window.addEventListener('online', () => { state.offlineState = state.offlineReady ? 'ready' : 'checking'; render(); flushPendingEvents(); });
 window.addEventListener('offline', () => { state.offlineState = 'error'; render(); });
+window.addEventListener('popstate', () => {
+  if (!historyArmed) return;
+  clearDraft(); state.view = 'map'; state.story = heroStory(); state.feedback = null; state.hint = null; render();
+  history.pushState({ saulat: true, guard: true }, '', location.href);
+});
+armAppHistory();
 init();

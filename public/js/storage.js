@@ -4,6 +4,7 @@ const PROGRESS_KEY = 'saulat-progress-v1';
 const LANG_KEY = 'saulat-lang';
 const ONBOARDING_KEY = 'saulat-onboarded';
 const EVENTS_KEY = 'saulat-events-v1';
+const DRAFT_KEY = 'saulat-draft-v1';
 const ERROR_TYPES = ['fact_not_found', 'similar_not_proving', 'conclusion_beyond_data'];
 
 function blank() { return { schemaVersion: 1, xp: 0, tasks: {}, completedStories: [], history: [] }; }
@@ -75,6 +76,16 @@ export function loadLanguage() { return localStorage.getItem(LANG_KEY) === 'kk' 
 export function saveLanguage(lang) { localStorage.setItem(LANG_KEY, lang); }
 export function hasOnboarded() { return localStorage.getItem(ONBOARDING_KEY) === '1'; }
 export function finishOnboarding() { localStorage.setItem(ONBOARDING_KEY, '1'); }
+export function loadDraft() {
+  try {
+    const value = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
+    return value && value.schemaVersion === 1 ? value : null;
+  } catch { return null; }
+}
+export function saveDraft(draft) {
+  try { localStorage.setItem(DRAFT_KEY, JSON.stringify({ schemaVersion: 1, ...draft })); } catch { /* draft is best effort */ }
+}
+export function clearDraft() { localStorage.removeItem(DRAFT_KEY); }
 
 export function taskProgress(progress, storyId, taskId) {
   return progress.tasks[`${storyId}:${taskId}`] || { attempts: 0, hintsUsed: 0, firstTry: null, xpAwarded: false, xpEarned: 0, solved: false };
@@ -194,4 +205,5 @@ export async function resetProgress() {
   try { const events = await idbAll('events'); for (const event of events) await idbDelete('events', event.eventId); } catch { /* fallback below */ }
   try { const events = await idbAll('eventArchive'); for (const event of events) await idbDelete('eventArchive', event.eventId); } catch { /* fallback below */ }
   localStorage.removeItem(PROGRESS_KEY); localStorage.removeItem(EVENTS_KEY); localStorage.removeItem(ONBOARDING_KEY);
+  clearDraft();
 }
