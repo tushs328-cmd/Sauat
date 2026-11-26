@@ -17,7 +17,6 @@
     <circle cx="110" cy="165" r="13" fill="#f3c74d"/><circle cx="180" cy="165" r="13" fill="#f3c74d"/>
     <path d="M210 192c21-12 49-12 70 0l-10 27h-50Z" fill="#d5a125" stroke="#8d6710" stroke-width="4"/>
     <path d="M225 185c8-16 33-16 41 0" fill="none" stroke="#203c38" stroke-width="4"/>
-    <text x="154" y="263" text-anchor="middle" font-family="system-ui,sans-serif" font-size="17" font-weight="700" fill="#203c38">ЗОЛОТО · ЧАША</text>
   </g>
   <path d="M467 452h412" stroke="#f5f2e8" stroke-width="6" opacity=".8"/>
 </svg>
