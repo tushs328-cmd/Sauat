@@ -8,7 +8,7 @@
 - Горизонтальный overflow: не обнаружен во всех сохранённых map/practice/diagnostic audits.
 - Фокус: виден во всех сохранённых audits (`outline: solid` на активном элементе).
 - Изображения: в сохранённых story screens `complete=true`, `naturalWidth>0`.
-- Console: practice/diagnostic сценарии не дали ошибок приложения; offline reload дал `ERR_FAILED` на favicon вместе с BUG-001.
+- Console: practice/diagnostic сценарии не дали ошибок приложения; offline reload после остановки сервера остаётся BUG-001. Полная консольная запись именно этого stopped-server шага не проверена.
 
 ## W5 follow-up — 2026-11-25
 
@@ -33,7 +33,7 @@
 
 ## Команды
 
-- `node qa/run.js` из копии приложения — exit 0; 25 сценариев, 18 PASS / 7 FAIL (BUG-001 и BUG-003).
+- `node qa/run.js` из копии приложения — exit 0; 25 сценариев, 23 PASS / 2 FAIL: BUG-001 и один неповторившийся `kk-1440-first` launch failure (targeted rerun 1/1 PASS). Истории 02–05 проверены открытыми в jury mode.
 - `node tools/qa/a11y_perf.js` — exit 0; 7 synthetic sessions, `qa/out/a11y-perf.json`.
-- `npm test` — exit 0; 59/59.
+- `npm test` — exit 0; 61/61.
 

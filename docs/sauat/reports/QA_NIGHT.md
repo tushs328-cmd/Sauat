@@ -1,4 +1,28 @@
-# QA_NIGHT — A26–A28 финальный прогон
+# QA_NIGHT — текущий ночной прогон
+
+Дата: 26.11.2026; HEAD `391ad30`; источник приложения — чистая копия `git archive HEAD` в `qa/.tmp/night-2026-11-26-391ad30`. Все браузерные данные синтетические (`СИМУЛЯЦИЯ`), push не выполнялся.
+
+## Прогон после HEAD 391ad30
+
+| Проверка | Exit code / результат |
+|---|---|
+| `npm test` | 0 — 61/61 |
+| `npm run validate` | 0 — контент валиден; эвристические warnings |
+| `npm run build:demo` | 0 — 5 practice + 2 diagnostic |
+| `node scripts/static-smoke.mjs --include-draft` | 0 — PASS |
+| `npm run size` | 0 — startup gzip 73.0 KB, budget PASS |
+| `npm run qa` | 0 — validate + 61/61 + Docker smoke PASS |
+| Playwright `qa/run.js` | exit 0 — 25 сценариев: 23 PASS / 2 FAIL |
+
+Playwright проверил RU/KK и 360×800, 768×1024, 1440×900, диагностику, кабинет, экспорт/импорт и `?jury=1`. Диагностика: 6/6 контекстов, по 3 задания, подсказки скрыты — PASS. Teacher import: `saulat-events.json`, принято 3, событий 3, метрика `0/3` — PASS. Jury mode: 5/5 practice и 2/2 diagnostic открыты — PASS.
+
+В полном запуске `kk-1440-first` один раз получил `Could not open http://localhost:3400`; отдельный повтор этого сценария прошёл (1/1), поэтому это не подтверждённый дефект приложения. `offline-ru-360` после остановки сервера воспроизводимо FAIL — BUG-001. В обычном режиме истории 02–05 заблокированы как последовательный прогресс; в jury mode все пять открыты — BUG-003 переведён в product decision.
+
+ПРОВЕРИТЬ: человеческое ревью KK, внешний hosting URL, реальный ученический пилот, production-нагрузка, axe-core и Lighthouse.
+
+---
+
+# Исторический прогон A26–A28
 
 Дата: 26.11.2026. Проверен локальный demo dist; это не пилот с реальными
 учениками и не проверка внешнего hosting URL.

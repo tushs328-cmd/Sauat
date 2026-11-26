@@ -220,10 +220,12 @@ function runDiagnostic({ lang, width, height }) {
 
 function runStoryAvailability({ lang, width, height }) {
   const session = `qa-${runStamp}-story-availability-${lang}-${width}`;
-  const result = { id: `story-availability-${lang}-${width}`, lang, viewport: `${width}x${height}`, status: 'PASS', errors: [] };
+  const juryUrl = `${baseUrl}${baseUrl.includes('?') ? '&' : '?'}jury=1`;
+  const result = { id: `story-availability-${lang}-${width}`, lang, viewport: `${width}x${height}`, mode: 'jury', status: 'PASS', errors: [] };
   try {
     fresh(session);
     code(session, `async page => {
+      await page.goto(${JSON.stringify(juryUrl)});
       await page.setViewportSize({ width: ${width}, height: ${height} });
       const label = ${JSON.stringify(lang === 'ru' ? 'РУ Русский' : 'ҚАЗ Қазақша')};
       const language = page.getByRole('button', { name: label });
@@ -390,7 +392,7 @@ const results = {
   baseUrl,
   synthetic: true,
   note: 'СИМУЛЯЦИЯ: браузерные персоны не являются реальными учениками.',
-  baseline: { validate: 'PASS (exit 0)', tests: 'PASS (59/59, exit 0)' },
+  baseline: { validate: 'PASS (exit 0)', tests: 'PASS (61/61, exit 0)' },
   scenarios: []
 };
 const maxScenarios = Number(process.env.QA_MAX_SCENARIOS || 0);
