@@ -27,12 +27,24 @@
 
 ## Сверка ссылок из `FACT_CHECK.md`
 
-Для каждого уникального URL выполнена отдельная `curl -L --max-time 25`
-проверка. Делегированный curl-прогон получил HTTP 200 для девяти ссылок и HTTP
-403 после перенаправления для правового PDF; локальный shell-прогон в этой
-сессии дополнительно столкнулся с DNS `exit 6`. Поэтому ниже указан итоговый
-статус содержательной сверки, а транспортные оговорки сохранены явно. Для PDF
-статус **недоступно**; остальные статусы основаны на полученном тексте страницы.
+Для каждого уникального URL выполнена отдельная текущая проверка
+`curl -L --max-time 25` **26.11.2026**. Девять страниц вернули HTTP 200, а
+правовой PDF после редиректа — HTTP 403. Поэтому для PDF статус **недоступно**;
+остальные статусы ниже основаны на полученном тексте страницы и на местах,
+указанных в `FACT_CHECK.md`.
+
+| URL из `FACT_CHECK.md` | Текущий curl-результат |
+|---|---:|
+| `https://archaeology.kz/en/heritages/54-esik-obasy` | HTTP 200 |
+| `https://archaeology.kz/heritages/54-esik-obasy` | HTTP 200 |
+| `https://archaeology.kz/ru/expeditions/44-raskopki-issykskogo-kurgana` | HTTP 200 |
+| `https://issykrm.kz/?page_id=1270&lang=en` | HTTP 200 |
+| `https://science.nasa.gov/earth/earth-observatory/world-of-change/aral-sea/` | HTTP 200 |
+| `https://eros.usgs.gov/earthshots/aral-sea-kazakhstan-and-uzbekistan` | HTTP 200 |
+| `https://www.gov.kz/org/kyzylorda-aral/press/article/details/229600` | HTTP 200 |
+| `https://www.esa.int/articles/about-us/directorates/science/baikonur-cosmodrome` | HTTP 200 |
+| `https://www.gov.kz/org/kyzylorda-karmakshy-toretam` | HTTP 200 |
+| `https://law.gov.kz/api/documents/104885/kaz/31.05.2016/download/pdf` | HTTP 403 после редиректа — **недоступно** |
 
 | Утверждение | URL | Статус | Граница вывода |
 |---|---|---|---|
