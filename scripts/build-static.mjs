@@ -113,13 +113,46 @@ self.addEventListener('fetch', (event) => {
 `;
 }
 
+function replaceRequired(source, pattern, replacement, label) {
+  const normalized = source.replace(/\r\n?/g, '\n');
+  const result = normalized.replace(pattern, replacement);
+  if (result === normalized) throw new Error('Static build transform failed: ' + label);
+  return result;
+}
+
 function staticStorageModule(source) {
-  return source
-    .replace("const EVENTS_KEY = 'saulat-events-v1';", "const EVENTS_KEY = 'saulat-events-v1';\nconst STATIC_BUILD = globalThis.__SAULAT_STATIC__ === true;\nconst STATIC_EVENT_LIMIT = 500;\nfunction readStaticEvents() {\n  try {\n    const value = JSON.parse(localStorage.getItem(EVENTS_KEY) || '[]');\n    return Array.isArray(value) ? value.slice(-STATIC_EVENT_LIMIT) : [];\n  } catch {\n    try { localStorage.removeItem(EVENTS_KEY); } catch { /* storage is unavailable */ }\n    return [];\n  }\n}\nfunction writeStaticEvents(events) {\n  try { localStorage.setItem(EVENTS_KEY, JSON.stringify(events.slice(-STATIC_EVENT_LIMIT))); } catch { /* quota or disabled storage */ }\n}")
-    .replace('export async function queueEvent(event) {\n  try {', "export async function queueEvent(event) {\n  if (STATIC_BUILD) {\n    const events = readStaticEvents();\n    if (!events.some((item) => item.eventId === event.eventId)) writeStaticEvents([...events, event]);\n    return;\n  }\n  try {")
-    .replace('export async function exportEvents() {\n  try {', "export async function exportEvents() {\n  if (STATIC_BUILD) return readStaticEvents();\n  try {")
-    .replace("  if (!incoming) throw new Error('Файл должен содержать массив events.');\n  if (incoming.some((event) => !validEvent(event)))", "  if (!incoming) throw new Error('Файл должен содержать массив events.');\n  if (incoming.length > 500) throw new Error('Файл содержит более 500 событий.');\n  if (new TextEncoder().encode(JSON.stringify(incoming)).length > 2 * 1024 * 1024) throw new Error('Файл событий больше 2 МБ.');\n  if (incoming.some((event) => !validEvent(event)))")
-    .replace('export async function flushEvents() {\n  if (!navigator.onLine)', 'export async function flushEvents() {\n  if (STATIC_BUILD || !navigator.onLine)');
+  let transformed = source.replace(/\r\n?/g, '\n');
+  transformed = replaceRequired(
+    transformed,
+    /const\s+EVENTS_KEY\s*=\s*['"]saulat-events-v1['"]\s*;/,
+    "const EVENTS_KEY = 'saulat-events-v1';\nconst STATIC_BUILD = globalThis.__SAULAT_STATIC__ === true;\nconst STATIC_EVENT_LIMIT = 500;\nfunction readStaticEvents() {\n  try {\n    const value = JSON.parse(localStorage.getItem(EVENTS_KEY) || '[]');\n    return Array.isArray(value) ? value.slice(-STATIC_EVENT_LIMIT) : [];\n  } catch {\n    try { localStorage.removeItem(EVENTS_KEY); } catch { /* storage is unavailable */ }\n    return [];\n  }\n}\nfunction writeStaticEvents(events) {\n  try { localStorage.setItem(EVENTS_KEY, JSON.stringify(events.slice(-STATIC_EVENT_LIMIT))); } catch { /* quota or disabled storage */ }\n}",
+    'storage constants'
+  );
+  transformed = replaceRequired(
+    transformed,
+    /export\s+async\s+function\s+queueEvent\s*\(\s*event\s*\)\s*\{\s*/,
+    "export async function queueEvent(event) {\n  if (STATIC_BUILD) {\n    const events = readStaticEvents();\n    if (!events.some((item) => item.eventId === event.eventId)) writeStaticEvents([...events, event]);\n    return;\n  }\n",
+    'storage queueEvent'
+  );
+  transformed = replaceRequired(
+    transformed,
+    /export\s+async\s+function\s+exportEvents\s*\(\s*\)\s*\{\s*/,
+    "export async function exportEvents() {\n  if (STATIC_BUILD) return readStaticEvents();\n",
+    'storage exportEvents'
+  );
+  transformed = replaceRequired(
+    transformed,
+    /(export\s+async\s+function\s+importTeacherEvents\s*\(\s*payload\s*\)\s*\{\s*const\s+incoming\s*=\s*extractEvents\(payload\);)/,
+    (match) => match + "\n  if (incoming.length > 500) throw new Error('Файл содержит более 500 событий.');\n  if (new TextEncoder().encode(JSON.stringify(incoming)).length > 2 * 1024 * 1024) throw new Error('Файл событий больше 2 МБ.');",
+    'storage importTeacherEvents'
+  );
+  transformed = replaceRequired(
+    transformed,
+    /export\s+async\s+function\s+flushEvents\s*\(\s*\)\s*\{\s*/,
+    "export async function flushEvents() {\n  if (STATIC_BUILD || !navigator.onLine) return { sent: 0 };\n",
+    'storage flushEvents'
+  );
+  return transformed;
 }
 
 const includeDraft = process.argv.includes('--include-draft');
