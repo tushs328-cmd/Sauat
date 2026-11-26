@@ -73,7 +73,11 @@ export async function saveProgress(progress) {
   catch { localStorage.setItem(PROGRESS_KEY, JSON.stringify(progress)); }
 }
 
-export function loadLanguage() { return localStorage.getItem(LANG_KEY) === 'kk' ? 'kk' : 'ru'; }
+export function loadLanguage() {
+  const stored = localStorage.getItem(LANG_KEY);
+  if (stored === 'kk' || stored === 'ru') return stored;
+  return String(globalThis.navigator?.language || '').toLowerCase().startsWith('kk') ? 'kk' : 'ru';
+}
 export function saveLanguage(lang) { localStorage.setItem(LANG_KEY, lang); }
 export function loadTheme() {
   const stored = localStorage.getItem(THEME_KEY);
