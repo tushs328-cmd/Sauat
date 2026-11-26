@@ -4,6 +4,7 @@ const PROGRESS_KEY = 'saulat-progress-v1';
 const LANG_KEY = 'saulat-lang';
 const ONBOARDING_KEY = 'saulat-onboarded';
 const EVENTS_KEY = 'saulat-events-v1';
+const ERROR_TYPES = ['fact_not_found', 'similar_not_proving', 'conclusion_beyond_data'];
 
 function blank() { return { schemaVersion: 1, xp: 0, tasks: {}, completedStories: [], history: [] }; }
 function localProgress() {
@@ -141,6 +142,7 @@ function validEvent(event) {
     && Number.isInteger(event.attempt) && event.attempt > 0 && typeof event.answerCorrect === 'boolean'
     && typeof event.evidenceCorrect === 'boolean' && Number.isInteger(event.hintsUsed) && event.hintsUsed >= 0
     && typeof event.firstTry === 'boolean' && ['kk', 'ru'].includes(event.lang)
+    && (!('errorType' in event) || event.errorType === null || ERROR_TYPES.includes(event.errorType))
     && ['ai', 'rules', 'none'].includes(event.mentorSource);
 }
 
@@ -176,10 +178,13 @@ export async function flushEvents() {
   let events;
   try { events = await idbAll('events'); } catch { events = JSON.parse(localStorage.getItem(EVENTS_KEY) || '[]'); }
   if (!events.length) return { sent: 0 };
-  const response = await fetch('/api/events', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ events: events.slice(0, 500) }), signal: AbortSignal.timeout(3500) });
+  // Старый сервер принимает прежнюю схему; расширенное событие остаётся в локальном архиве
+  // и экспортируется учителю, а в telemetry отправляется совместимое представление.
+  const batch = events.slice(0, 500);
+  const response = await fetch('/api/events', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ events: batch.map(({ errorType, ...event }) => event) }), signal: AbortSignal.timeout(3500) });
   if (!response.ok) throw new Error(`events HTTP ${response.status}`);
   if (response.headers.get('x-saulat-offline') === '1') throw new Error('events deferred while offline');
-  for (const event of events.slice(0, 500)) { try { await idbDelete('events', event.eventId); } catch { /* local fallback is best effort */ } }
+  for (const event of batch) { try { await idbDelete('events', event.eventId); } catch { /* local fallback is best effort */ } }
   localStorage.removeItem(EVENTS_KEY);
   return response.json();
 }

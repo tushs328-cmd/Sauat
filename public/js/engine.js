@@ -5,7 +5,10 @@ export function sameIds(left = [], right = []) {
 export function evaluateTask(task, selectedOptionIds, selectedEvidenceIds) {
   const answerCorrect = sameIds(selectedOptionIds, task.correctOptionIds);
   const evidenceCorrect = !task.requireEvidence || task.acceptedEvidenceSets.some((set) => sameIds(selectedEvidenceIds, set));
-  return { answerCorrect, evidenceCorrect, complete: answerCorrect && evidenceCorrect };
+  let errorType = null;
+  if (!answerCorrect) errorType = task.type === 'find' ? 'fact_not_found' : 'conclusion_beyond_data';
+  else if (!evidenceCorrect) errorType = 'similar_not_proving';
+  return { answerCorrect, evidenceCorrect, complete: answerCorrect && evidenceCorrect, errorType };
 }
 
 export function nextHint(task, usedCount) {
