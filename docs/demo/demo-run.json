@@ -1,9 +1,12 @@
 {
   "synthetic": true,
+  "audio": false,
   "note": "СИМУЛЯЦИЯ: демонстрационный браузерный сценарий, не реальные ученики.",
-  "baseUrl": "http://localhost:3400",
-  "durationMs": 180000,
+  "path": "entry diagnostic → case_001 story → story summary → teacher cabinet",
+  "baseUrl": "http://127.0.0.1:3400/?jury=1",
+  "viewport": "1280x720",
+  "durationMs": 120000,
   "videoPath": "C:\\Users\\ertai\\Desktop\\hakaton\\Saulat_Sauat\\docs\\demo\\demo.webm",
-  "session": "sauat-demo-1795585905737",
+  "session": "sauat-a29-1795664520225",
   "error": null
 }
