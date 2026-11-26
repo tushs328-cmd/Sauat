@@ -199,3 +199,45 @@ test('events deduplicate, import safely and calculate main metric', async () => 
   const after = await request('/api/teacher/summary', { headers: { 'x-session-token': teacher.sessionId } });
   assert.equal(after.body.learners, 3);
 });
+
+test('teacher import handles 500 events, duplicates, broken and oversized files', async () => {
+  const teacher = login({ role: 'teacher', classCode: 'USTAZ7' });
+  const baseEvent = {
+    anonId: 'load-anon',
+    ts: new Date().toISOString(),
+    contentVersion: 1,
+    storyId: 'fixture_test',
+    taskId: 't1',
+    skill: 'find',
+    mode: 'practice',
+    attempt: 1,
+    answerCorrect: true,
+    evidenceCorrect: true,
+    hintsUsed: 0,
+    firstTry: true,
+    lang: 'ru',
+    mentorSource: 'none'
+  };
+  const events = Array.from({ length: 500 }, (_, index) => ({ ...baseEvent, eventId: 'load-' + index, anonId: 'load-anon-' + index }));
+  const upload = (payload, name = 'events.json') => {
+    const form = new FormData();
+    form.append('file', new Blob([typeof payload === 'string' ? payload : JSON.stringify(payload)], { type: 'application/json' }), name);
+    return fetch(base + '/api/teacher/import', { method: 'POST', headers: { 'x-session-token': teacher.sessionId }, body: form });
+  };
+
+  const loaded = await upload({ events });
+  assert.equal(loaded.status, 200);
+  assert.deepEqual(await loaded.json(), { accepted: 500, duplicates: 0, rejected: 0 });
+
+  const duplicate = await upload({ events }, 'duplicates.json');
+  assert.equal(duplicate.status, 200);
+  assert.deepEqual(await duplicate.json(), { accepted: 0, duplicates: 500, rejected: 0 });
+
+  const broken = await upload('{broken', 'broken.json');
+  assert.equal(broken.status, 400);
+  assert.equal((await broken.json()).accepted, 0);
+
+  const oversized = await upload('x'.repeat(2 * 1024 * 1024 + 1), 'oversized.json');
+  assert.equal(oversized.status, 413);
+  assert.equal((await oversized.json()).accepted, 0);
+});

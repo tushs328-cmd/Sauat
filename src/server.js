@@ -287,6 +287,8 @@ export function createApp({ dataPath = defaultDataPath, mentorContextResolver = 
   app.get('*', (req, res) => res.sendFile(path.join(root, 'public', 'index.html')));
   app.use((error, req, res, next) => {
     if (error?.type === 'entity.too.large') return res.status(413).json({ error: 'Тело запроса слишком большое.' });
+    if (error?.code === 'LIMIT_FILE_SIZE') return res.status(413).json({ error: 'Файл слишком большой.', accepted: 0, duplicates: 0, rejected: 1 });
+    if (error?.name === 'MulterError') return res.status(400).json({ error: 'Некорректный файл загрузки.', accepted: 0, duplicates: 0, rejected: 1 });
     if (error instanceof SyntaxError && error.status === 400) return res.status(400).json({ error: 'Некорректный JSON.' });
     return next(error);
   });

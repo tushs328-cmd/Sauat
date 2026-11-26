@@ -115,9 +115,10 @@ self.addEventListener('fetch', (event) => {
 
 function staticStorageModule(source) {
   return source
-    .replace("const EVENTS_KEY = 'saulat-events-v1';", "const EVENTS_KEY = 'saulat-events-v1';\nconst STATIC_BUILD = globalThis.__SAULAT_STATIC__ === true;")
-    .replace('export async function queueEvent(event) {\n  try {', "export async function queueEvent(event) {\n  if (STATIC_BUILD) {\n    const events = JSON.parse(localStorage.getItem(EVENTS_KEY) || '[]');\n    if (!events.some((item) => item.eventId === event.eventId)) localStorage.setItem(EVENTS_KEY, JSON.stringify([...events, event]));\n    return;\n  }\n  try {")
-    .replace('export async function exportEvents() {\n  try {', "export async function exportEvents() {\n  if (STATIC_BUILD) {\n    try { return JSON.parse(localStorage.getItem(EVENTS_KEY) || '[]'); } catch { return []; }\n  }\n  try {")
+    .replace("const EVENTS_KEY = 'saulat-events-v1';", "const EVENTS_KEY = 'saulat-events-v1';\nconst STATIC_BUILD = globalThis.__SAULAT_STATIC__ === true;\nconst STATIC_EVENT_LIMIT = 500;\nfunction readStaticEvents() {\n  try {\n    const value = JSON.parse(localStorage.getItem(EVENTS_KEY) || '[]');\n    return Array.isArray(value) ? value.slice(-STATIC_EVENT_LIMIT) : [];\n  } catch {\n    try { localStorage.removeItem(EVENTS_KEY); } catch { /* storage is unavailable */ }\n    return [];\n  }\n}\nfunction writeStaticEvents(events) {\n  try { localStorage.setItem(EVENTS_KEY, JSON.stringify(events.slice(-STATIC_EVENT_LIMIT))); } catch { /* quota or disabled storage */ }\n}")
+    .replace('export async function queueEvent(event) {\n  try {', "export async function queueEvent(event) {\n  if (STATIC_BUILD) {\n    const events = readStaticEvents();\n    if (!events.some((item) => item.eventId === event.eventId)) writeStaticEvents([...events, event]);\n    return;\n  }\n  try {")
+    .replace('export async function exportEvents() {\n  try {', "export async function exportEvents() {\n  if (STATIC_BUILD) return readStaticEvents();\n  try {")
+    .replace("  if (!incoming) throw new Error('Файл должен содержать массив events.');\n  if (incoming.some((event) => !validEvent(event)))", "  if (!incoming) throw new Error('Файл должен содержать массив events.');\n  if (incoming.length > 500) throw new Error('Файл содержит более 500 событий.');\n  if (new TextEncoder().encode(JSON.stringify(incoming)).length > 2 * 1024 * 1024) throw new Error('Файл событий больше 2 МБ.');\n  if (incoming.some((event) => !validEvent(event)))")
     .replace('export async function flushEvents() {\n  if (!navigator.onLine)', 'export async function flushEvents() {\n  if (STATIC_BUILD || !navigator.onLine)');
 }
 
@@ -149,6 +150,7 @@ let main = fs.readFileSync(path.join(publicRoot, 'js', 'main.js'), 'utf8');
 main = `globalThis.__SAULAT_STATIC__ = true;\nconst STATIC_BASE = new URL('../', import.meta.url);\nconst staticUrl = (value) => new URL(String(value).replace(/^\\/+/, ''), STATIC_BASE).href;\n${main}`;
 main = main.replace("? `/${file}` : file", "? staticUrl(file) : file");
 main = main.replace("if (navigator.onLine) { try { const response = await fetch('/api/mentor'", "if (navigator.onLine && !globalThis.__SAULAT_STATIC__) { try { const response = await fetch('/api/mentor'");
+main = main.replace("for (const file of files || []) { try { const payload = JSON.parse(await file.text());", "for (const file of files || []) { try { if (file.size > 2 * 1024 * 1024) throw new Error('Файл событий больше 2 МБ.'); const payload = JSON.parse(await file.text());");
 write(path.join(distRoot, 'js', 'main.js'), main);
 
 const mode = includeDraft ? 'demo draft' : 'published';

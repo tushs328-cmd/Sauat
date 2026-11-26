@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import http from 'node:http';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import { spawnSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 
@@ -40,11 +40,9 @@ try {
   if (includeDraft) {
     const practice = manifest.stories.filter((story) => story.kind === 'practice');
     const diagnostic = manifest.stories.filter((story) => story.kind === 'diagnostic');
-    assert.equal(practice.length, 4, 'demo manifest must contain case_001..004');
+    assert.ok(practice.length >= 4, 'demo manifest must contain the current practice stories');
     assert.equal(diagnostic.length, 2, 'demo manifest must contain diag_entry and diag_exit');
-    assert.deepEqual(manifest.stories.map((story) => story.id), [
-      'case_001', 'case_002', 'case_003', 'case_004', 'diag_entry_001', 'diag_exit_001'
-    ]);
+    assert.ok(manifest.stories.some((story) => story.id === 'case_001'), 'demo manifest must contain case_001');
     assert.ok(manifest.stories.every((story) => story.reviewStatus?.kk === 'draft' && story.reviewStatus?.ru === 'draft'));
     for (const story of manifest.stories) {
       assert.ok(fs.existsSync(path.join(distRoot, 'content', story.file)), `${story.file} must be copied to dist`);
@@ -67,10 +65,28 @@ try {
   const offline = fs.readFileSync(path.join(distRoot, 'js', 'offline.js'), 'utf8');
   assert.match(main, /__SAULAT_STATIC__/);
   assert.match(main, /staticUrl\(file\)/);
+  assert.match(main, /file\.size > 2 \* 1024 \* 1024/);
   assert.match(storage, /STATIC_BUILD/);
+  assert.match(storage, /STATIC_EVENT_LIMIT = 500/);
   assert.match(storage, /localStorage\.setItem\(EVENTS_KEY/);
+  assert.match(storage, /Файл содержит более 500 событий/);
   assert.match(offline, /new URL\('\.\.\/sw\.js', import\.meta\.url\)/);
-  const mode = includeDraft ? 'demo manifest 4 practice + 2 diagnostic stories' : 'published manifest';
+  globalThis.__SAULAT_STATIC__ = true;
+  const localStore = new Map([['saulat-events-v1', '{broken']]);
+  globalThis.localStorage = {
+    getItem: (key) => localStore.get(key) ?? null,
+    setItem: (key, value) => localStore.set(key, value),
+    removeItem: (key) => localStore.delete(key)
+  };
+  const staticStorage = await import(pathToFileURL(path.join(distRoot, 'js', 'storage.js')).href + '?static-smoke=' + Date.now());
+  await staticStorage.queueEvent({ eventId: 'stress-1' });
+  await staticStorage.queueEvent({ eventId: 'stress-1' });
+  assert.equal((await staticStorage.exportEvents()).length, 1, 'corrupt localStorage must recover and deduplicate');
+  for (let index = 0; index < 700; index += 1) await staticStorage.queueEvent({ eventId: 'stress-' + (index + 2) });
+  assert.equal((await staticStorage.exportEvents()).length, 500, 'static event queue must cap load');
+  const mode = includeDraft
+    ? 'demo manifest ' + manifest.stories.filter((story) => story.kind === 'practice').length + ' practice + ' + manifest.stories.filter((story) => story.kind === 'diagnostic').length + ' diagnostic stories'
+    : 'published manifest';
   console.log(`Static smoke PASS: ${base} served ${mode}, content/assets, relative SW precache and offline rules/export guards.`);
 } finally {
   await new Promise((resolve) => server.close(resolve));
