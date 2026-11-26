@@ -2,6 +2,7 @@ const DB_NAME = 'saulat-client';
 const DB_VERSION = 2;
 const PROGRESS_KEY = 'saulat-progress-v1';
 const LANG_KEY = 'saulat-lang';
+const THEME_KEY = 'saulat-theme-v1';
 const ONBOARDING_KEY = 'saulat-onboarded';
 const EVENTS_KEY = 'saulat-events-v1';
 const DRAFT_KEY = 'saulat-draft-v1';
@@ -74,6 +75,12 @@ export async function saveProgress(progress) {
 
 export function loadLanguage() { return localStorage.getItem(LANG_KEY) === 'kk' ? 'kk' : 'ru'; }
 export function saveLanguage(lang) { localStorage.setItem(LANG_KEY, lang); }
+export function loadTheme() {
+  const stored = localStorage.getItem(THEME_KEY);
+  if (stored === 'dark' || stored === 'light') return stored;
+  return globalThis.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+export function saveTheme(theme) { localStorage.setItem(THEME_KEY, theme === 'dark' ? 'dark' : 'light'); }
 export function hasOnboarded() { return localStorage.getItem(ONBOARDING_KEY) === '1'; }
 export function finishOnboarding() { localStorage.setItem(ONBOARDING_KEY, '1'); }
 export function loadDraft() {

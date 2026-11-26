@@ -2,18 +2,20 @@ import { dictionary } from './i18n/index.js';
 import { loadContent } from './content.js';
 import { evaluateTask, nextHint, taskLabel } from './engine.js';
 import { prepareOffline } from './offline.js';
-import { clearDraft, exportEvents, finishOnboarding, flushEvents, getAnonId, hasOnboarded, importTeacherEvents, loadDraft, loadLanguage, loadProgress, loadTeacherEvents, queueEvent, recordAttempt, recordHint, resetProgress, saveDraft, saveLanguage, taskProgress } from './storage.js';
+import { clearDraft, exportEvents, finishOnboarding, flushEvents, getAnonId, hasOnboarded, importTeacherEvents, loadDraft, loadLanguage, loadProgress, loadTeacherEvents, loadTheme, queueEvent, recordAttempt, recordHint, resetProgress, saveDraft, saveLanguage, saveTheme, taskProgress } from './storage.js';
 
 const params = new URLSearchParams(location.search);
 const devMode = params.get('dev') === '1';
 const demoMode = globalThis.__SAULAT_STATIC__ === true;
 let historyArmed = false;
 const state = {
-  lang: loadLanguage(), view: hasOnboarded() ? 'map' : 'onboarding', stories: [], story: null, manifest: null,
+  lang: loadLanguage(), theme: loadTheme(), view: hasOnboarded() ? 'map' : 'onboarding', stories: [], story: null, manifest: null,
   taskIndex: 0, selectedOptions: [], selectedEvidence: [], feedback: null, hint: null, mentorState: 'none', mentorSource: 'none',
   progress: { schemaVersion: 1, xp: 0, tasks: {}, completedStories: [], history: [] }, juryProgress: null, teacherEvents: [], importMessage: '', errorMessage: '', offlineReady: false, offlineState: 'checking', juryMode: params.get('jury') === '1', demoMode
 };
 const app = document.querySelector('#app');
+function applyTheme() { document.documentElement.dataset.theme = state.theme; }
+applyTheme();
 const t = (key) => dictionary(state.lang)[key] || dictionary('ru')[key] || key;
 const text = (value) => value?.[state.lang] || value?.ru || '';
 const esc = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' }[char]));
@@ -44,7 +46,9 @@ const practiceComplete = () => practiceStories().length > 0 && practiceStories()
 function header({ back = false } = {}) {
   const offlineLabel = state.offlineReady ? t('offlineReady') : state.offlineState === 'error' ? t('offlineNotReady') : t('offlineChecking');
   const hideXp = state.view === 'results' || state.story?.kind === 'diagnostic';
-  return `<header class="topbar"><button class="brand" data-action="map" type="button" aria-label="SAUAT"><span class="brand-mark">S</span><span><strong>SAUAT</strong><small>${esc(t('slogan'))}</small></span></button><div class="top-actions">${back ? `<button class="icon-button" data-action="map" type="button">← <span>${esc(t('back'))}</span></button>` : ''}${state.demoMode ? `<span class="demo-badge">${esc(t('demoMode'))}</span>` : ''}${state.juryMode ? `<span class="jury-badge">${esc(t('juryMode'))}</span>` : ''}<span class="offline-status ${state.offlineReady ? 'ready' : ''}" aria-live="polite"><span class="status-dot"></span>${esc(offlineLabel)}</span>${hideXp ? '' : `<span class="xp-pill"><span class="xp-star">XP</span> ${state.progress.xp}</span>`}<button class="language-toggle" data-action="toggle-lang" type="button">${esc(dictionary(state.lang).other)}</button></div></header>`;
+  const nextThemeLabel = state.theme === 'dark' ? t('themeLight') : t('themeDark');
+  const themeIcon = state.theme === 'dark' ? '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.5 15.3A8.5 8.5 0 0 1 8.7 3.5 8.5 8.5 0 1 0 20.5 15.3Z"/></svg>' : '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>';
+  return `<header class="topbar"><button class="brand" data-action="map" type="button" aria-label="SAUAT"><span class="brand-mark">S</span><span><strong>SAUAT</strong><small>${esc(t('slogan'))}</small></span></button><div class="top-actions">${back ? `<button class="icon-button" data-action="map" type="button">← <span>${esc(t('back'))}</span></button>` : ''}${state.demoMode ? `<span class="demo-badge">${esc(t('demoMode'))}</span>` : ''}${state.juryMode ? `<span class="jury-badge">${esc(t('juryMode'))}</span>` : ''}<span class="offline-status ${state.offlineReady ? 'ready' : ''}" aria-live="polite"><span class="status-dot"></span>${esc(offlineLabel)}</span>${hideXp ? '' : `<span class="xp-pill"><span class="xp-star">XP</span> ${state.progress.xp}</span>`}<button class="theme-toggle" data-action="toggle-theme" type="button" aria-label="${esc(nextThemeLabel)}" aria-pressed="${state.theme === 'dark'}">${themeIcon}<span class="theme-toggle-label">${esc(nextThemeLabel)}</span></button><button class="language-toggle" data-action="toggle-lang" type="button">${esc(dictionary(state.lang).other)}</button></div></header>`;
 }
 
 function storyBadge(story) { return story?.isTestFixture ? `<span class="tag sand">${esc(t('testBadge'))}</span>` : ''; }
@@ -89,6 +93,7 @@ function storyUnlocked(story) {
   return practiceComplete() && (index <= 1 || state.progress.completedStories.includes(list[index - 1]?.id));
 }
 function render() {
+  applyTheme();
   if (!state.story && !['onboarding', 'results', 'error', 'about', 'project'].includes(state.view)) state.view = 'map';
   app.innerHTML = state.view === 'onboarding' ? onboarding() : state.view === 'map' ? map() : state.view === 'story' ? storyIntro() : state.view === 'task' ? taskScreen() : state.view === 'reveal' ? reveal() : state.view === 'diagnostic-complete' ? diagnosticComplete() : state.view === 'about' ? aboutScreen() : state.view === 'project' ? projectScreen() : state.view === 'teacher-guide' ? teacherGuideScreen() : state.view === 'error' ? errorScreen() : results();
   const skipLink = document.querySelector('.skip-link');
@@ -121,7 +126,8 @@ function storySummaryMarkup() {
 }
 
 function onboarding() {
-  return `<div class="page onboarding"><div class="onboarding-art" aria-label="${esc(state.lang === 'ru' ? 'Реконструкция карты экспедиции' : 'Экспедиция картасының реконструкциясы')}"><div class="sun"></div><div class="mountain mountain-one"></div><div class="mountain mountain-two"></div><div class="route route-one"></div><div class="route route-two"></div><div class="artifact-seal">S</div></div><div class="onboarding-copy"><div class="eyebrow">${esc(t('eyebrow'))}</div><h1>SAUAT</h1><p class="display-title">${esc(t('slogan'))}</p><p class="lead">${esc(t('intro'))}</p><div class="reconstruction-label">${esc(t('reconstruction'))} · SAUAT</div><section class="language-card"><h2>${esc(t('chooseLang'))}</h2><div class="lang-options"><button class="lang-choice ${state.lang === 'ru' ? 'selected' : ''}" data-lang="ru" type="button"><span>РУ</span>Русский</button><button class="lang-choice ${state.lang === 'kk' ? 'selected' : ''}" data-lang="kk" type="button"><span>ҚАЗ</span>Қазақша</button></div><p>${esc(t('languageNote'))}</p></section><button class="primary-button wide" data-action="onboard" type="button">${esc(t('start'))} <span aria-hidden="true">→</span></button></div></div>`;
+  const alt = state.lang === 'ru' ? 'Ученица читает и доказывает ответ по тексту' : 'Оқушы мәтінге сүйеніп жауапты дәлелдеп отыр';
+  return `<div class="app-shell">${header()}<main class="page onboarding" id="main"><div class="onboarding-art" aria-label="${esc(state.lang === 'ru' ? 'Иллюстрация ученицы за исследованием истории' : 'Тарихты зерттеп отырған оқушы иллюстрациясы')}"><img class="onboarding-hero-image" src="/assets/hero_student.webp" width="960" height="540" fetchpriority="high" alt="${esc(alt)}"><div class="onboarding-art-caption"><span>${esc(t('reconstruction'))}</span><span>SAUAT · ${esc(t('slogan'))}</span></div></div><div class="onboarding-copy"><div class="eyebrow">${esc(t('eyebrow'))}</div><h1>SAUAT</h1><p class="display-title">${esc(t('slogan'))}</p><p class="lead">${esc(t('intro'))}</p><div class="reconstruction-label">${esc(t('reconstruction'))} · SAUAT</div><section class="language-card"><h2>${esc(t('chooseLang'))}</h2><div class="lang-options"><button class="lang-choice ${state.lang === 'ru' ? 'selected' : ''}" data-lang="ru" type="button"><span>РУ</span>Русский</button><button class="lang-choice ${state.lang === 'kk' ? 'selected' : ''}" data-lang="kk" type="button"><span>ҚАЗ</span>Қазақша</button></div><p>${esc(t('languageNote'))}</p></section><button class="primary-button wide" data-action="onboard" type="button">${esc(t('start'))} <span aria-hidden="true">→</span></button></div></main></div>`;
 }
 
 function practiceNode(story, index, list) {
@@ -143,7 +149,8 @@ function aboutScreen() {
   return `<div class="app-shell">${header({ back: true })}<main class="page info-page" id="main"><div class="eyebrow">${esc(t('aboutEyebrow'))}</div><h1>${esc(t('aboutTitle'))}</h1><p class="lead">${esc(t('aboutIntro'))}</p><div class="info-grid"><section class="info-card"><h2>${esc(t('aboutProblemTitle'))}</h2><p>${esc(t('aboutProblem'))}</p></section><section class="info-card"><h2>${esc(t('aboutHowTitle'))}</h2><p class="flow-line">${esc(t('aboutHowFlow'))}</p><p>${esc(t('aboutHowText'))}</p></section><section class="info-card"><h2>${esc(t('aboutLimitsTitle'))}</h2><p>${esc(t('aboutLimits'))}</p></section></div><button class="primary-button wide" data-action="map" type="button">${esc(t('openMap'))}</button></main></div>`;
 }
 function projectScreen() {
-  return `<div class="app-shell">${header({ back: true })}<main class="page info-page" id="main"><div class="eyebrow">${esc(t('projectEyebrow'))}</div><h1>${esc(t('projectTitle'))}</h1><p class="lead">${esc(t('projectIntro'))}</p><section class="info-card ai-disclosure-card"><h2>${esc(t('projectToolsTitle'))}</h2><p class="ai-disclosure">${esc(t('aiDisclosure'))}</p><p>${esc(t('projectTools'))}</p></section><section class="info-card"><h2>${esc(t('projectTrustTitle'))}</h2><p>${esc(t('projectTrust'))}</p></section><button class="primary-button wide" data-action="map" type="button">${esc(t('openMap'))}</button></main></div>`;
+  const attribution = state.lang === 'ru' ? 'Иллюстрация главного экрана создана с помощью OpenAI ImageGen (автор материалов — друг/команда), визуальная полировка по методике unslop (CC BY 4.0, Дамир Соколовский).' : 'Басты экран иллюстрациясы OpenAI ImageGen көмегімен жасалды (материал авторы — досы/команда), визуалды өңдеу unslop әдістемесімен орындалды (CC BY 4.0, Дамир Соколовский).';
+  return `<div class="app-shell">${header({ back: true })}<main class="page info-page" id="main"><div class="eyebrow">${esc(t('projectEyebrow'))}</div><h1>${esc(t('projectTitle'))}</h1><p class="lead">${esc(t('projectIntro'))}</p><section class="info-card ai-disclosure-card"><h2>${esc(t('projectToolsTitle'))}</h2><p class="ai-disclosure">${esc(t('aiDisclosure'))}</p><p>${esc(t('projectTools'))}</p></section><section class="info-card"><h2>${esc(t('projectTrustTitle'))}</h2><p>${esc(t('projectTrust'))}</p></section><p class="project-attribution">${esc(attribution)}</p><button class="primary-button wide" data-action="map" type="button">${esc(t('openMap'))}</button></main></div>`;
 }
 function errorScreen() {
   return `<main class="page error-page" id="main" aria-live="assertive"><div class="eyebrow">SAUAT</div><h1>${esc(t('contentErrorTitle'))}</h1><p class="lead">${esc(state.errorMessage || t('contentErrorText'))}</p><p class="error-detail">${esc(navigator.onLine ? t('contentErrorHint') : t('offlineErrorHint'))}</p><button class="primary-button" data-action="retry" type="button">${esc(t('retry'))}</button></main>`;
@@ -229,6 +236,7 @@ function bind() {
 }
 async function action(name, storyId) {
   if (name === 'toggle-lang') { state.lang = state.lang === 'ru' ? 'kk' : 'ru'; saveLanguage(state.lang); return render(); }
+  if (name === 'toggle-theme') { state.theme = state.theme === 'dark' ? 'light' : 'dark'; saveTheme(state.theme); return render(); }
   if (name === 'onboard') { finishOnboarding(); state.view = 'map'; return render(); }
   if (name === 'map') { clearDraft(); state.view = 'map'; state.story = heroStory(); state.feedback = null; return render(); }
   if (name === 'results') { state.view = 'results'; state.teacherEvents = await loadTeacherEvents(); return render(); }

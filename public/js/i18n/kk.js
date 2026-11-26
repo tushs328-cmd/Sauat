@@ -1,6 +1,6 @@
 export default {
   code: 'kk', short: 'ҚАЗ', other: 'РУ', langName: 'Қазақша', review: 'Тексерілуде', test: 'ТЕСТТІК ҮЗІНДІ',
-  slogan: 'Оқы. Зертте. Дәлелде.', skipToGame: 'Ойынға өту', eyebrow: 'ОЙЫН АРҚЫЛЫ ОҚУ · ТІРКЕЛУСІЗ',
+  slogan: 'Оқы. Зертте. Дәлелде.', skipToGame: 'Ойынға өту', themeLight: 'Жарық режим', themeDark: 'Қараңғы режим', eyebrow: 'ОЙЫН АРҚЫЛЫ ОҚУ · ТІРКЕЛУСІЗ',
   intro: 'Тарихты үзінділер арқылы зертте, қорытындыны тексер және артефакт ал.', start: 'Бағытты бастау', continue: 'Жалғастыру', chooseLang: 'Саяхат тілін таңда', languageNote: 'Тілді кез келген уақытта ауыстыра аласың.',
   map: 'Оқиғалар картасы', xp: 'XP', progress: 'Ілгерілеу', progressStories: 'аяқталған тарих', progressTasks: 'миссия', rewardTease: 'миссия үшін сыйлық', mission: 'миссия', missions: 'миссия', adventure: 'Оқиға', unlocked: 'Ашық', locked: 'Жақында ашылады', firstAdventure: 'Көк бума', mapIntro: 'Бір бағыт — төрт қысқа қадам: тап, қорытынды жаса, дәлелде, тексер.', fixtureNotice: 'Тест мазмұны: деректер мен тарих әлі тексерілуде.', review: 'Тексерілуде',
   hook: 'Тарихтың хугі', documents: 'Құжаттар', document: 'Құжат', read: 'ID бар үзінділерді оқы', beginTasks: 'Тапсырмаларға өту', back: 'Артқа', task: 'Тапсырма', question: 'Сұрақ', answer: 'Жауап', evidence: 'Дәлел', chooseEvidence: 'Сәйкес үзінділердің барлығын таңда', check: 'Тексеру', nextTask: 'Келесі қадам', reveal: 'Құпияны ашу',
