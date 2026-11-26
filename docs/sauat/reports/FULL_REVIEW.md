@@ -56,6 +56,6 @@
 
 ## Проверка
 
-Точные exit codes и текущий список ручных замечаний фиксируются в
-`FINAL_JURY_PASS.md`; перед коммитом повторяются `npm test`, `npm run validate`,
-`npm run build:demo`, static smoke и `npm run size`.
+Точные exit codes и текущий список ручных замечаний зафиксированы в
+`FINAL_JURY_PASS.md`; перед последним коммитом повторялись `npm test`,
+`npm run validate`, `npm run build:demo`, static smoke и `npm run size`.
