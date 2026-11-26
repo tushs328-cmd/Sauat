@@ -65,13 +65,25 @@ export async function loadContent() {
 
 function staticServiceWorker(cacheVersion) {
   return `const ROOT = new URL('./', self.location.href);
-const CACHE = \`saulat-static-${cacheVersion}-\${ROOT.pathname}\`;
+const SAVE_DATA = new URL(self.location.href).searchParams.get('saulatSaveData') === '1';
+const CACHE = \`saulat-static-${cacheVersion}-\${SAVE_DATA ? 'lite' : 'full'}-\${ROOT.pathname}\`;
 const at = (value) => new URL(String(value).replace(/^\\/+/, ''), ROOT).href;
 const SHELL = [
   '', 'index.html', 'sauat.css', 'manifest.webmanifest', 'sw.js', 'dev/fixture.json',
   'js/main.js', 'js/content.js', 'js/engine.js', 'js/storage.js', 'js/offline.js',
-  'js/i18n/index.js', 'js/i18n/ru.js', 'js/i18n/kk.js'
+  'js/i18n/index.js', 'js/i18n/ru.js', 'js/i18n/kk.js', 'icons/icon-192.svg', 'icons/icon-512.svg'
 ];
+
+function safeRelative(value) {
+  const relative = String(value ?? '').replace(/^\\/+/, '');
+  return relative && !relative.split('/').includes('..') && !/^https?:/i.test(relative) ? relative : null;
+}
+
+function storyUrls(entry) {
+  const file = String(entry?.file ?? '');
+  const storyFile = file.startsWith('dev/') ? file : 'content/' + file;
+  return [storyFile, ...(entry?.assets || [])].map(safeRelative).filter(Boolean).map(at);
+}
 
 async function precachePlan() {
   let manifest = { stories: [{ file: 'dev/fixture.json', assets: [] }] };
@@ -79,10 +91,7 @@ async function precachePlan() {
     const response = await fetch(at('content/manifest.json'), { cache: 'no-store' });
     if (response.ok) manifest = await response.json();
   } catch { /* fixture fallback keeps the static shell installable */ }
-  const stories = (manifest.stories || []).flatMap((entry) => [
-    String(entry.file).startsWith('dev/') ? entry.file : \`content/\${entry.file}\`,
-    ...(entry.assets || []).map((asset) => String(asset).replace(/^\\/+/, ''))
-  ]);
+  const stories = SAVE_DATA ? [] : (manifest.stories || []).flatMap(storyUrls);
   return { manifest, urls: [...new Set([...SHELL, ...stories])].map(at) };
 }
 
@@ -94,6 +103,16 @@ self.addEventListener('install', (event) => event.waitUntil((async () => {
   await self.skipWaiting();
 })()));
 
+self.addEventListener('message', (event) => {
+  if (!SAVE_DATA || event.data?.type !== 'SAULAT_PRECACHE_STORY') return;
+  event.waitUntil((async () => {
+    const urls = storyUrls(event.data.story);
+    if (!urls.length) return;
+    const cache = await caches.open(CACHE);
+    await cache.addAll(urls);
+  })());
+});
+
 self.addEventListener('activate', (event) => event.waitUntil((async () => {
   const keys = await caches.keys();
   await Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key)));
@@ -104,6 +123,10 @@ self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin || url.pathname.includes('/api/')) return;
+  if (SAVE_DATA && (/\\/content\\/[^/]+\\.json$/.test(url.pathname) || /\\/assets\\//.test(url.pathname))) {
+    event.respondWith(fetch(event.request));
+    return;
+  }
   event.respondWith(caches.match(event.request).then((cached) => cached || fetch(event.request).then((response) => {
     const copy = response.clone();
     caches.open(CACHE).then((cache) => cache.put(event.request, copy));
@@ -111,6 +134,29 @@ self.addEventListener('fetch', (event) => {
   }).catch(() => event.request.mode === 'navigate' ? caches.match(at(''), { ignoreSearch: true }).then((fallback) => fallback || caches.match(at('index.html'))) : Response.error())));
 });
 `;
+}
+
+function staticOfflineModule(source) {
+  let transformed = source.replace(/\r\n?/g, '\n');
+  transformed = replaceRequired(
+    transformed,
+    /export\s+async\s+function\s+prepareOffline\s*\(\s*manifest\s*\)\s*\{/,
+    "export async function prepareOffline(manifest, selectedStory = null) {\n  const connection = navigator.connection || navigator.mozConnection || navigator.webkitConnection;\n  const dataSaver = Boolean(connection?.saveData) || connection?.effectiveType === '2g';",
+    'offline prepareOffline signature'
+  );
+  transformed = replaceRequired(
+    transformed,
+    /navigator\.serviceWorker\.register\(\s*['\"]\/sw\.js['\"]\s*\)/,
+    "navigator.serviceWorker.register((() => { const url = new URL('../sw.js', import.meta.url); if (dataSaver) url.searchParams.set('saulatSaveData', '1'); return url; })(), { scope: new URL('../', import.meta.url).pathname })",
+    'offline service worker registration'
+  );
+  transformed = replaceRequired(
+    transformed,
+    /const\s+urls\s*=\s*manifestUrls\(manifest\);/,
+    "if (dataSaver && selectedStory && registration.active) registration.active.postMessage({ type: 'SAULAT_PRECACHE_STORY', story: selectedStory });\n    const urls = dataSaver ? manifestUrls({ stories: selectedStory ? [selectedStory] : [] }) : manifestUrls(manifest);",
+    'offline selected story plan'
+  );
+  return transformed;
 }
 
 function replaceRequired(source, pattern, replacement, label) {
@@ -175,15 +221,16 @@ write(path.join(distRoot, 'js', 'content.js'), staticContentModule());
 write(path.join(distRoot, 'js', 'storage.js'), staticStorageModule(fs.readFileSync(path.join(publicRoot, 'js', 'storage.js'), 'utf8')));
 let offline = fs.readFileSync(path.join(publicRoot, 'js', 'offline.js'), 'utf8');
 offline = offline
-  .replace("navigator.serviceWorker.register('/sw.js')", "navigator.serviceWorker.register(new URL('../sw.js', import.meta.url), { scope: new URL('../', import.meta.url).pathname })")
   .replace('new URL(url, location.origin).href', 'url');
-write(path.join(distRoot, 'js', 'offline.js'), offline);
+write(path.join(distRoot, 'js', 'offline.js'), staticOfflineModule(offline));
 
 let main = fs.readFileSync(path.join(publicRoot, 'js', 'main.js'), 'utf8');
 main = `globalThis.__SAULAT_STATIC__ = true;\nconst STATIC_BASE = new URL('../', import.meta.url);\nconst staticUrl = (value) => new URL(String(value).replace(/^\\/+/, ''), STATIC_BASE).href;\n${main}`;
 main = main.replace("? `/${file}` : file", "? staticUrl(file) : file");
 main = main.replace("if (navigator.onLine) { try { const response = await fetch('/api/mentor'", "if (navigator.onLine && !globalThis.__SAULAT_STATIC__) { try { const response = await fetch('/api/mentor'");
 main = main.replace("for (const file of files || []) { try { const payload = JSON.parse(await file.text());", "for (const file of files || []) { try { if (file.size > 2 * 1024 * 1024) throw new Error('Файл событий больше 2 МБ.'); const payload = JSON.parse(await file.text());");
+main = main.replace("prepareOffline(state.manifest)", "prepareOffline(state.manifest, state.manifest.stories.find((item) => item.id === state.story?.id) || null)");
+main = main.replace("state.story = story; state.view = 'story'; return render();", "state.story = story; state.view = 'story'; void prepareOffline(state.manifest, state.manifest.stories.find((item) => item.id === story.id) || null); return render();");
 write(path.join(distRoot, 'js', 'main.js'), main);
 
 const mode = includeDraft ? 'demo draft' : 'published';
