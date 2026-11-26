@@ -12,17 +12,20 @@ For a jury/demo bundle with the current draft stories, use:
 ```bash
 npm run build:demo
 npm run test:static -- --include-draft
+npm run size
+npm run pack:site
 ```
 
 This demo build is not a publication approval: it includes draft review statuses
 and should be opened with `?jury=1` to make the included stories directly
-available during a presentation. The ordinary route intentionally keeps the
-next practice story locked until the previous one is completed.
+available during a presentation. The ordinary route keeps the next practice
+story locked until the previous one is completed. `pack:site` rebuilds the demo
+and creates `dist.zip` next to `dist/`; the archive uses `/` entry separators
+and is rejected above 20 MiB.
 
-The build copies the public shell, published content and a generated
-`content/manifest.json`. Draft stories and test fixtures are not placed in the
-manifest. Until a story is approved in both languages, the offline shell uses
-the bundled test fixture as a safe fallback. The static bundle does not need
+The build copies the public shell, selected content and a generated
+`content/manifest.json`. The ordinary build excludes drafts and fixtures;
+`build:demo` intentionally includes the seven current draft stories. The static bundle does not need
 Node, Express or Ollama at runtime: hints use the local rules, progress and
 events stay on the device, and the export button downloads JSON.
 

@@ -7,11 +7,34 @@ import { createManifest, projectRoot } from '../src/content.js';
 const scriptsRoot = path.dirname(fileURLToPath(import.meta.url));
 const publicRoot = path.join(projectRoot, 'public');
 const contentRoot = path.join(projectRoot, 'content');
-const distRoot = path.join(projectRoot, 'dist');
+const distRoot = process.env.SAULAT_DIST_DIR ? path.resolve(process.env.SAULAT_DIST_DIR) : path.join(projectRoot, 'dist');
 
 function write(file, value) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, value, 'utf8');
+}
+
+function listFiles(root, relative = '') {
+  return fs.readdirSync(path.join(root, relative), { withFileTypes: true }).flatMap((entry) => {
+    const next = path.join(relative, entry.name);
+    return entry.isDirectory() ? listFiles(root, next) : [next];
+  });
+}
+
+function cacheVersionFor(manifest) {
+  const hash = createHash('sha256').update(JSON.stringify(manifest));
+  for (const relative of listFiles(publicRoot).sort()) {
+    hash.update(`public/${relative.replaceAll(path.sep, '/')}`);
+    hash.update(fs.readFileSync(path.join(publicRoot, relative)));
+  }
+  for (const story of manifest.stories) {
+    for (const relative of [story.file, ...(story.assets || [])]) {
+      hash.update(`asset/${relative}`);
+      hash.update(fs.readFileSync(path.join(relative.startsWith('assets/') ? publicRoot : contentRoot, relative)));
+    }
+  }
+  hash.update(fs.readFileSync(fileURLToPath(import.meta.url)));
+  return hash.digest('hex').slice(0, 12);
 }
 
 function relativeHtml(value) {
@@ -44,7 +67,8 @@ export function manifestUrls(manifest) {
   return [...new Set([
     '/', '/index.html', '/sauat.css', '/manifest.webmanifest', '/sw.js', '/content/manifest.json',
     '/js/main.js', '/js/content.js', '/js/engine.js', '/js/storage.js', '/js/offline.js',
-    '/js/i18n/index.js', '/js/i18n/ru.js', '/js/i18n/kk.js', '/dev/fixture.json', ...stories
+    '/js/i18n/index.js', '/js/i18n/ru.js', '/js/i18n/kk.js', '/dev/fixture.json',
+    '/icons/icon-192.svg', '/icons/icon-512.svg', '/assets/hero_student.webp', ...stories
   ])].map(resolveStaticUrl);
 }
 
@@ -71,7 +95,8 @@ const at = (value) => new URL(String(value).replace(/^\\/+/, ''), ROOT).href;
 const SHELL = [
   '', 'index.html', 'sauat.css', 'manifest.webmanifest', 'sw.js', 'dev/fixture.json',
   'js/main.js', 'js/content.js', 'js/engine.js', 'js/storage.js', 'js/offline.js',
-  'js/i18n/index.js', 'js/i18n/ru.js', 'js/i18n/kk.js', 'icons/icon-192.svg', 'icons/icon-512.svg'
+  'js/i18n/index.js', 'js/i18n/ru.js', 'js/i18n/kk.js', 'icons/icon-192.svg', 'icons/icon-512.svg',
+  'assets/hero_student.webp'
 ];
 
 function safeRelative(value) {
@@ -203,7 +228,7 @@ function staticStorageModule(source) {
 
 const includeDraft = process.argv.includes('--include-draft');
 const manifest = createManifest({ includeDraft, includeFixture: false });
-const cacheVersion = createHash('sha256').update(JSON.stringify(manifest)).digest('hex').slice(0, 12);
+const cacheVersion = cacheVersionFor(manifest);
 fs.rmSync(distRoot, { recursive: true, force: true });
 fs.cpSync(publicRoot, distRoot, { recursive: true });
 fs.mkdirSync(path.join(distRoot, 'content'), { recursive: true });
@@ -215,7 +240,10 @@ for (const story of manifest.stories) {
 
 write(path.join(distRoot, 'index.html'), relativeHtml(fs.readFileSync(path.join(publicRoot, 'index.html'), 'utf8')));
 write(path.join(distRoot, 'legacy.html'), relativeHtml(fs.readFileSync(path.join(publicRoot, 'legacy.html'), 'utf8')));
-write(path.join(distRoot, 'manifest.webmanifest'), fs.readFileSync(path.join(publicRoot, 'manifest.webmanifest'), 'utf8').replace('"start_url": "/"', '"start_url": "./"'));
+const webManifest = JSON.parse(fs.readFileSync(path.join(publicRoot, 'manifest.webmanifest'), 'utf8'));
+webManifest.start_url = './';
+for (const icon of webManifest.icons || []) icon.src = `./${String(icon.src).replace(/^\/+/, '')}`;
+write(path.join(distRoot, 'manifest.webmanifest'), `${JSON.stringify(webManifest, null, 2)}\n`);
 write(path.join(distRoot, 'sw.js'), staticServiceWorker(cacheVersion));
 write(path.join(distRoot, 'js', 'content.js'), staticContentModule());
 write(path.join(distRoot, 'js', 'storage.js'), staticStorageModule(fs.readFileSync(path.join(publicRoot, 'js', 'storage.js'), 'utf8')));
@@ -227,6 +255,14 @@ write(path.join(distRoot, 'js', 'offline.js'), staticOfflineModule(offline));
 let main = fs.readFileSync(path.join(publicRoot, 'js', 'main.js'), 'utf8');
 main = `globalThis.__SAULAT_STATIC__ = true;\nconst STATIC_BASE = new URL('../', import.meta.url);\nconst staticUrl = (value) => new URL(String(value).replace(/^\\/+/, ''), STATIC_BASE).href;\n${main}`;
 main = main.replace("? `/${file}` : file", "? staticUrl(file) : file");
+main = main.replace('src="/assets/hero_student.webp"', "src=\"${staticUrl('assets/hero_student.webp')}\"");
+main = main.replace('if (demoMode || devMode || state.juryMode) return true;', 'if (devMode || state.juryMode) return true;');
+main = main.replace('const heroStory = () => practiceStories()[0] || diagnosticStories()[0] || state.story;', "const heroStory = () => practiceStories()[0] || diagnosticStories()[0] || state.story;\nfunction activeProgress() { return state.juryMode ? (state.juryProgress ||= structuredClone(state.progress)) : state.progress; }");
+main = main.replaceAll('const progress = state.juryMode && state.juryProgress ? state.juryProgress : state.progress;', 'const progress = activeProgress();');
+main = main.replaceAll('state.progress.completedStories', 'activeProgress().completedStories');
+main = main.replaceAll('state.progress.xp', 'activeProgress().xp');
+main = main.replaceAll('taskProgress(state.progress,', 'taskProgress(activeProgress(),');
+main = main.replaceAll('const progress = state.juryMode ? (state.juryProgress ||= structuredClone(state.progress)) : state.progress;', 'const progress = activeProgress();');
 main = main.replace("if (navigator.onLine) { try { const response = await fetch('/api/mentor'", "if (navigator.onLine && !globalThis.__SAULAT_STATIC__) { try { const response = await fetch('/api/mentor'");
 main = main.replace("for (const file of files || []) { try { const payload = JSON.parse(await file.text());", "for (const file of files || []) { try { if (file.size > 2 * 1024 * 1024) throw new Error('Файл событий больше 2 МБ.'); const payload = JSON.parse(await file.text());");
 main = main.replace("prepareOffline(state.manifest)", "prepareOffline(state.manifest, state.manifest.stories.find((item) => item.id === state.story?.id) || null)");

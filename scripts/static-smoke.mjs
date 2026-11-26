@@ -57,8 +57,10 @@ try {
   assert.doesNotMatch(serviceWorker, /fetch\(['"]\//);
   assert.match(serviceWorker, /new URL\('\.'|new URL\(String\(value\)/);
   assert.match(serviceWorker, /cache\.addAll\(plan\.urls\)/);
-  const cacheVersion = createHash('sha256').update(JSON.stringify(manifest)).digest('hex').slice(0, 12);
-  assert.match(serviceWorker, new RegExp(`saulat-static-${cacheVersion}-`), 'SW cache must change when the manifest changes');
+  const manifestOnly = createHash('sha256').update(JSON.stringify(manifest)).digest('hex').slice(0, 12);
+  const cacheMatch = serviceWorker.match(/saulat-static-([a-f0-9]{12})-/);
+  assert.ok(cacheMatch, 'SW cache must include a twelve-character version');
+  assert.notEqual(cacheMatch[1], manifestOnly, 'SW cache must include shell/content changes, not only the manifest');
 
   const main = fs.readFileSync(path.join(distRoot, 'js', 'main.js'), 'utf8');
   const storage = fs.readFileSync(path.join(distRoot, 'js', 'storage.js'), 'utf8');
