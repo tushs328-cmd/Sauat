@@ -1,35 +1,42 @@
-# QA_NIGHT — финальный прогон W2
+# QA_NIGHT — A26–A28 финальный прогон
 
-Дата: 25.11.2026. Сценарии ниже проверены на локальном demo dist; это не
-пилот с реальными учениками и не проверка внешнего hosting URL.
+Дата: 26.11.2026. Проверен локальный demo dist; это не пилот с реальными
+учениками и не проверка внешнего hosting URL.
 
 | Проверка | Viewport | Результат |
 |---|---:|---|
-| `build:demo`: 4 practice + 2 diagnostic | — | PASS |
-| static smoke: manifest, JSON, assets, SW precache | — | PASS |
-| карта demo с шестью историями | 360×800 | PASS |
-| story/practice case_001–004, touch targets | 360×800 | PASS — `0` целей ниже 44×44 |
-| story/practice case_001–004, overflow | 360×800 | PASS — `scrollWidth=345` |
-| story/practice case_001–004, keyboard focus | 360×800 | PASS — видимый outline |
-| story images / fallback illustration | 360×800 | PASS |
-| `npm run qa`: validate + tests + Docker smoke | — | PASS |
+| `build:demo`: 5 practice + 2 diagnostic | — | PASS |
+| карта demo: 7 историй | 360×800 | PASS |
+| первый экран: маршрут, прогресс, XP и награда | 360×800 | PASS |
+| выбор ответа + доказательства → смена RU/KK | 360×800 | PASS — выбор `2 → 2` сохранён |
+| подсказки уровней 1–2–3 | 360×800 | PASS — читаемы, без overflow |
+| итоги после case_001 | 360×800 | PASS — 4 строки, вопрос, доказательства, повторение |
+| `npm run qa`: validate + 60 тестов + Docker smoke | — | PASS |
 
-## BUG-002
+## A26 — UX на 360 px
 
-Повторный аудит на реальном Chrome в dist охватил карту и все восемь экранов
-story/practice для case_001–004. Найдено `0` интерактивных целей меньше
-`44×44 px`; на карте проверено 17 элементов. Горизонтального переполнения нет:
-`scrollWidth=345` при viewport `360`. Фокус с клавиатуры виден на каждом
-проверенном экране. **BUG-002 закрыт для demo dist.** Подробная таблица сохранена
-в [`qa/BUG-002_DIST_360.md`](../../../qa/BUG-002_DIST_360.md).
+На карте видны `0/5` историй, `0/18` миссий и `0 XP` с пояснением награды.
+В задании после ошибочного ответа проверены все три уровня подсказки; при
+смене языка выбранные ответ и доказательство сохранились (`2 → 2`). На карте и
+экране задания `scrollX=0`, `scrollWidth` не превышает 360.
+
+## A27 — итоги истории
+
+После прохождения case_001 появился экран с заголовком награды и секцией
+«Итоги истории»: 4 строки с результатом, вопросом и выбранными evidence-фрагментами,
+плюс блок «Что повторить». Выбранные evidence теперь сохраняются в локальном
+прогрессе; режим жюри использует отдельную копию прогресса и не меняет основную.
 
 ## Команды и exit code
 
-- `npm run build:demo` — exit 0; dist содержит 4 practice и 2 diagnostic.
-- `node scripts/static-smoke.mjs --include-draft` — exit 0.
-- Playwright CLI, headed Chrome, 360×800 — exit 0; карта и 8 story/practice
-  экранов проверены, `0` целей ниже 44×44.
-- `npm run qa` — exit 0: validate, `npm test` 59/59, Docker smoke PASS.
+- `npm run test:static` — exit 0; published static smoke PASS.
+- `npm test` — exit 0; 60/60.
+- `npm run build:demo` — exit 0; финальный dist содержит 5 practice и 2 diagnostic.
+- `npm run qa` — exit 0: validate, 60/60, Docker smoke PASS.
+- Playwright CLI, headed Chrome, чистый origin, 360×800 — exit 0; сохранены
+  [`a26-map-360.png`](../../../qa/a26-map-360.png),
+  [`a26-hints-1-2-3-360.png`](../../../qa/a26-hints-1-2-3-360.png) и
+  [`a27-summary-360.png`](../../../qa/a27-summary-360.png).
 
 Ограничения остаются прежними: внешний hosting URL, человеческая проверка KK,
 реальный ученический пилот и production-нагрузка этим прогоном не подтверждены.
