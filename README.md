@@ -14,7 +14,7 @@ SAUAT — двуязычное offline-first PWA для практики фун�
 
 Стартовый набор demo — ≈123,4 КБ gzip; в нём 7 историй: 5 practice и 2 diagnostic. После первой загрузки публичная версия работает офлайн. Пилот не проводился, эффект на грамотность не доказан.
 
-[Прототип](https://tushs328-cmd.github.io/Sauat/) · [Режим жюри ?jury=1](https://tushs328-cmd.github.io/Sauat/?jury=1) · [Видео](docs/video/SAUAT_pitch.mp4) · [Слайды PDF](docs/slides/export/slides.pdf)
+[Прототип](https://tushs328-cmd.github.io/Sauat/) · [Режим жюри ?jury=1](https://tushs328-cmd.github.io/Sauat/?jury=1) · [Видео (YouTube)](https://youtu.be/a-U3QH7f7eM) · [файл MP4](docs/video/SAUAT_pitch.mp4) · [Слайды PDF](docs/slides/export/slides.pdf)
 
 ![Карта историй](docs/demo/map-7-stories-1280.png)
 
