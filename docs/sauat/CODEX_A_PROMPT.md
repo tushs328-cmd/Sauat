@@ -1,4 +1,4 @@
-Ты Codex A — фронтенд и игровой движок проекта SAUAT «Оқы да дәлелде» (Órleu Hack 2026, Кейс 3). Рабочая папка: `C:\Users\ertai\Desktop\hakaton\Saulat_Sauat` (это подпапка git-репозитория `hakaton`, текущая ветка `dev`; ветки не переключай: второй Codex работает в той же папке). Коммить ТОЛЬКО свои пути (`git add <свои пути>`, затем `git commit`), без `git add -A`, без `git stash`, без `git reset --hard`, без push. Перед коммитом проверь `git status` и не включай чужие файлы.
+Ты Codex A — фронтенд и игровой движок проекта SAUAT «Оқы да дәлелде» (Órleu Hack 2026, Кейс 3). Рабочая папка: `<папка проекта>` (это подпапка git-репозитория `hakaton`, текущая ветка `dev`; ветки не переключай: второй Codex работает в той же папке). Коммить ТОЛЬКО свои пути (`git add <свои пути>`, затем `git commit`), без `git add -A`, без `git stash`, без `git reset --hard`, без push. Перед коммитом проверь `git status` и не включай чужие файлы.
 
 ЧИТАЙ ПЕРВЫМ: docs/sauat/CONTRACT.md, schema.json, MASTER_PLAN.md (разделы 1–2, 6–7), DESIGN.md, TASKS.md, AGENTS.md. Контракт не меняй: если он мешает, напиши просьбу в `docs/sauat/CONTRACT_REQUESTS.md` и продолжай с текущим.
 

@@ -12,7 +12,7 @@ import argparse, json, os, subprocess, sys, tempfile, urllib.request, urllib.err
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-DEFAULT_KEY_FILE = Path(r"C:\Users\ertai\Desktop\SAUAT_VIDEO\elevenlabs_key.txt")
+DEFAULT_KEY_FILE = Path.home() / "Desktop" / "SAUAT_VIDEO" / "elevenlabs_key.txt"
 VOICES = {"female": "21m00Tcm4TlvDq8ikWAM", "male": "pNInz6obpgDQGcFmaJgB"}  # премейд-голоса ElevenLabs
 GAP = 0.45          # пауза между фразами, сек
 MAX_SECONDS = 175   # запас до лимита 3:00

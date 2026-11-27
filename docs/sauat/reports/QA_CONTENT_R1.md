@@ -40,4 +40,4 @@
 
 ## Артефакт воспроизведения
 
-- [qa/content-qa-r1.mjs](/C:/Users/ertai/Desktop/hakaton/Saulat_Sauat/qa/content-qa-r1.mjs) — Playwright-матрица с переключением языков, персон, офлайна, подсказок и проверками UI.
+- [qa/content-qa-r1.mjs](qa/content-qa-r1.mjs) — Playwright-матрица с переключением языков, персон, офлайна, подсказок и проверками UI.

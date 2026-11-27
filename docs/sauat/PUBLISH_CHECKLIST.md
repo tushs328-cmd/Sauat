@@ -9,7 +9,7 @@ demo rules-наставника; серверный API и локальная Ol
 1. **Откройте PowerShell в корне проекта** и перейдите в подпапку:
 
    ```powershell
-   cd C:\Users\ertai\Desktop\hakaton\Saulat_Sauat
+   cd <папка проекта>
    ```
 
 2. **Соберите demo-пакет** (draft-статусы не меняются):
@@ -66,7 +66,7 @@ demo rules-наставника; серверный API и локальная Ol
    после проверки списка файлов):
 
    ```powershell
-   cd C:\Users\ertai\Desktop\hakaton
+   cd <папка репозитория>
    git switch dev
    git pull --rebase origin dev
    git status --short
