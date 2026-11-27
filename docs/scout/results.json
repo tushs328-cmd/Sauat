@@ -125,7 +125,7 @@
         "pwa_offline_first"
       ],
       "is_dataset": false,
-      "readme_first_500": "<p align=\"center\">\n<img src=\"https://img.shields.io/badge/version-1.0.0-blue.svg?cacheSeconds=2592000\" alt=\"Npm version\" target=\"_blank\" />\n<a href=\"https://circleci.com/gh/kefranabg/bento-starter/tree/master\"><img alt=\"CircleCI\" src=\"https://circleci.com/gh/kefranabg/bento-starter/tree/master.svg?style=svg&circle-token=f311e2320782a12321a769faa2ef1d3cdf5e1a10\" target=\"_blank\" /></a>\n<a href=\"https://bento-starter.netlify.com/\"><img alt=\"Documentation\" src=\"https://img.shields.io/badge/documenta",
+      "readme_first_500": "<p align=\"center\">\n<img src=\"https://img.shields.io/badge/version-1.0.0-blue.svg?cacheSeconds=2592000\" alt=\"Npm version\" target=\"_blank\" />\n<a href=\"https://circleci.com/gh/kefranabg/bento-starter/tree/master\"><img alt=\"CircleCI\" src=\"https://circleci.com/gh/kefranabg/bento-starter/tree/master.svg?style=svg&circle-token=REDACTED\" target=\"_blank\" /></a>\n<a href=\"https://bento-starter.netlify.com/\"><img alt=\"Documentation\" src=\"https://img.shields.io/badge/documenta",
       "has_tests": true,
       "has_dockerfile": false,
       "tree_file_count": 28,
