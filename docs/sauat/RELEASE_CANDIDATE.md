@@ -21,7 +21,7 @@
 | Файл | Размер, байт | SHA-256 |
 |---|---:|---|
 | `SAUAT_pitch.mp4` (2:37,6; 1280×720; в репозитории `docs/video/`) | 4992839 | `4e84cd8fdee26bbd3cf7010385b50861663170101c1f45685fa8eff8e209905d` |
-| `docs/slides/export/slides.pdf` (10 слайдов) | 264640 | `c23d23e4cb160fcac61eefedfe8d08627f51dae5cdcd85fcef1f39427e80fca1` |
+| `docs/slides/export/slides.pdf` (10 слайдов) | 135861 | `470ff2c138710a7f27ce1656364266ae113d9a5eb3e880eeff220c60ce7936d5` |
 
 Каждый файл меньше 20 000 000 байт.
 

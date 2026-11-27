@@ -2,7 +2,7 @@
 
 Этот файл содержит тексты для вставки в форму. Публичный прототип и код проверены
 27.11.2026 с чистого клиента без входа: прототип — https://tushs328-cmd.github.io/Sauat/ (режим жюри: https://tushs328-cmd.github.io/Sauat/?jury=1), код — https://github.com/tushs328-cmd/Sauat.
-Видеопитч — файл `SAUAT_pitch.mp4` (2:37, 4992839 байт), лежит в репозитории: https://github.com/tushs328-cmd/Sauat/blob/main/docs/video/SAUAT_pitch.mp4; презентация — `docs/slides/export/slides.pdf` (264640 байт).
+Видеопитч — файл `SAUAT_pitch.mp4` (2:37, 4992839 байт), лежит в репозитории: https://github.com/tushs328-cmd/Sauat/blob/main/docs/video/SAUAT_pitch.mp4; презентация — `docs/slides/export/slides.pdf` (135861 байт).
 В текущем demo-манифесте — 5 practice и 2 diagnostic истории; все семь имеют
 `reviewStatus: draft` и доступны в режиме жюри `?jury=1`.
 
