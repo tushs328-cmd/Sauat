@@ -24,7 +24,7 @@
 - `npm run validate`: exit 0, контент валиден; выданы 2 предупреждения о длине правильного варианта ответа.
 - `npm run size`: exit 0; текущий `dist` — 20 файлов, 204.1 KB raw и 90.7 KB gzip; стартовый набор — 193.4 KB raw и 87.6 KB gzip. Это не вес семиисторичной demo-сборки: текущий `dist/content/manifest.json` содержит `stories: []`, поэтому этот размер нельзя выдавать за финальный demo-weight.
 - `docs/video/SAUAT_pitch.mp4`: существует, **4 992 839 байт**, `ffprobe` — **157.6 с (2:37.6)**; лимит 3:00 и 20 000 000 байт соблюдён.
-- `docs/slides/export/slides.pdf`: существует, **264 640 байт**, `pdfinfo` — **10 страниц**, 1152×648 pt.
+- `docs/slides/export/slides.pdf`: существует, **135 861 байт**, `pdfinfo` — **10 страниц**, 1152×648 pt.
 
 ## Ссылки
 
@@ -53,7 +53,7 @@
 1. `все материалы честно помечены как draft` → `все 7 demo-историй имеют reviewStatus draft на русском и казахском; тестовый fixture в demo не входит`.
 2. `Статический публичный пакет после первой загрузки использует Service Worker и rules-наставника, поэтому открывается без сервера и без Ollama` → `Статический пакет рассчитан на offline после первой загрузки и использует rules-наставника; live offline reload и текущий live network capture в этом аудите не проверены`.
 3. `Видео: файл docs/video/SAUAT_pitch.mp4` → `Видео: docs/video/SAUAT_pitch.mp4 — 4 992 839 байт, 157.6 с (2:37.6)`.
-4. `Презентация: файл docs/slides/export/slides.pdf` → `Презентация: docs/slides/export/slides.pdf — 264 640 байт, 10 страниц`.
+4. `Презентация: файл docs/slides/export/slides.pdf` → `Презентация: docs/slides/export/slides.pdf — 135 861 байт, 10 страниц`.
 5. `Владелец перед отправкой запускает npm run qa и сохраняет exit code` → `Перед отправкой запустить npm run qa и сохранить exit code; в текущем аудите exit 1 из-за недоступного Docker daemon, поэтому QA не считать PASS`.
 
 ## Команды и ограничения

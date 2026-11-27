@@ -16,6 +16,10 @@ SAUAT — двуязычное offline-first PWA для практики фун�
 
 [Прототип](https://tushs328-cmd.github.io/Sauat/) · [Режим жюри ?jury=1](https://tushs328-cmd.github.io/Sauat/?jury=1) · [Видео](docs/video/SAUAT_pitch.mp4) · [Слайды PDF](docs/slides/export/slides.pdf)
 
+![Карта историй](docs/demo/map-7-stories-1280.png)
+
+![Задание на телефоне](docs/demo/a25-case-001-task-360.png)
+
 [Вопросы и ответы](docs/sauat/PITCH_QA.md) · [Дорожная карта](docs/sauat/ROADMAP.md) · [Приватность](docs/sauat/PRIVACY_AND_DATA_FLOW.md) · [Как добавить историю](docs/sauat/AUTHORING_GUIDE.md)
 
 ## Проверить за 2 минуты
