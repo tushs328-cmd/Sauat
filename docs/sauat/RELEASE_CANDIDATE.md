@@ -4,8 +4,8 @@
 
 ## Версия
 - Репозиторий: https://github.com/tushs328-cmd/Sauat (публичный), ветка `main`.
-- Исходный коммит приложения (репозиторий разработки): `350448f` (`fix(ui): replace AI-hint wording with mentor-hint in about flow (RU/KK)`).
-- Опубликованный прототип: https://tushs328-cmd.github.io/Sauat/ (GitHub Pages, ветка `gh-pages`, коммит `6dbcbfd`, собран `npm run build:demo` из `350448f`; предыдущая рабочая публикация — `8bdf4d9`, для отката).
+- Исходный коммит приложения: `350448f` (последнее изменение интерфейса); после него менялись только документы, слайды и скрипты (код приложения в `public/`, `src/`, `content/` не менялся).
+- Опубликованный прототип: https://tushs328-cmd.github.io/Sauat/ (GitHub Pages, ветка `gh-pages`, коммит `82f60b4` (LF), собран `npm run build:demo` из чистой копии HEAD; файлы на живом URL побайтно совпадают со сборкой; предыдущие публикации `6dbcbfd`, `8bdf4d9` — для отката).
 - Режим жюри: https://tushs328-cmd.github.io/Sauat/?jury=1 (открывает все 7 историй).
 - Хэш содержимого опубликованной сборки (SHA-256 списка файлов): `700249fd3e518b09…`.
 
@@ -14,14 +14,14 @@
 - `npm run validate`: 0 ошибок (предупреждения эвристики длины вариантов).
 - `npm run build:demo`: 7 историй (5 practice + 2 diagnostic).
 - `node scripts/static-smoke.mjs --include-draft`: PASS.
-- `npm run size`: стартовый набор 123,2 КБ gzip (лимит 1465 КБ), PASS.
+- `npm run size`: стартовый набор 123,4 КБ gzip, всего 126,5 КБ gzip (лимит 1465 КБ), PASS.
 - Публичный URL без входа (чистый профиль Chromium): ресурсы из `/Sauat/` — HTTP 200; Service Worker управляет страницей; «Готово офлайн»; после отключения сети и перезагрузки приложение открывается и история читается; ошибок консоли нет.
 
 ## Файлы сдачи
 | Файл | Размер, байт | SHA-256 |
 |---|---:|---|
-| `SAUAT_pitch.mp4` (2:37,6; 1280×720) | 4 992 839 | `4e84cd8fdee26bbd3cf7010385b50861663170101c1f45685fa8eff8e209905d` |
-| `docs/slides/export/slides.pdf` (10 слайдов) | 261 533 | `d3f303a6a821d32ad8dd4abe91778fb9dba7e0b9977a880034a8b8c6fa1ea237` |
+| `SAUAT_pitch.mp4` (2:37,6; 1280×720; в репозитории `docs/video/`) | 4992839 | `4e84cd8fdee26bbd3cf7010385b50861663170101c1f45685fa8eff8e209905d` |
+| `docs/slides/export/slides.pdf` (10 слайдов) | 264640 | `c23d23e4cb160fcac61eefedfe8d08627f51dae5cdcd85fcef1f39427e80fca1` |
 
 Каждый файл меньше 20 000 000 байт.
 
