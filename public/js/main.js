@@ -61,11 +61,8 @@ function storyImage(story, className = 'story-image') {
   const figureCaption = className === 'hero-image' ? '' : `<figcaption>${esc(caption)}</figcaption>`;
   return `<figure class="${className}">${src ? `<img src="${esc(src)}" alt="${esc(alt)}">` : ''}<div class="story-placeholder"${src ? ' hidden' : ''}><span aria-hidden="true">◇</span><strong>${esc(t('reconstruction'))}</strong><small>${esc(t('reconstructionFallback'))}</small></div>${figureCaption}</figure>`;
 }
-function reviewBanner(story) {
-  const kkStatus = story?.reviewStatus?.kk;
-  const status = story?.reviewStatus?.[state.lang];
-  const message = kkStatus && kkStatus !== 'approved' ? t('kkReview') : status && status !== 'approved' ? `${t('review')} · ${status}` : '';
-  return message ? `<div class="notice review-notice" role="status"><span class="status-dot"></span><span>${esc(message)}</span></div>` : '';
+function reviewBanner() {
+  return '';
 }
 function taskTotals(story) {
   const total = story?.tasks?.length || 0;
