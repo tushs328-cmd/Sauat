@@ -20,7 +20,7 @@ SAUAT — двуязычное offline-first PWA для практики фун�
 
 ![Задание на телефоне](docs/demo/a25-case-001-task-360.png)
 
-[Вопросы и ответы](docs/sauat/PITCH_QA.md) · [Дорожная карта](docs/sauat/ROADMAP.md) · [Приватность](docs/sauat/PRIVACY_AND_DATA_FLOW.md) · [Как добавить историю](docs/sauat/AUTHORING_GUIDE.md)
+[Дорожная карта](docs/sauat/ROADMAP.md) · [Приватность](docs/sauat/PRIVACY_AND_DATA_FLOW.md) · [Как добавить историю](docs/sauat/AUTHORING_GUIDE.md)
 
 ## Проверить за 2 минуты
 
@@ -84,7 +84,7 @@ python -m http.server 4173 --directory dist
 ## Документы
 
 - [Release Candidate](docs/sauat/RELEASE_CANDIDATE.md) и [финальная приёмка R2](docs/sauat/reports/FINAL_ACCEPTANCE_R2.md)
-- [Вопросы и ответы](docs/sauat/PITCH_QA.md), [дорожная карта](docs/sauat/ROADMAP.md), [приватность и поток данных](docs/sauat/PRIVACY_AND_DATA_FLOW.md)
+- [Дорожная карта](docs/sauat/ROADMAP.md), [приватность и поток данных](docs/sauat/PRIVACY_AND_DATA_FLOW.md)
 - [Как добавить историю](docs/sauat/AUTHORING_GUIDE.md), [legacy / серверный режим](docs/sauat/LEGACY_README.md)
 
 ## Использованные ИИ-инструменты
