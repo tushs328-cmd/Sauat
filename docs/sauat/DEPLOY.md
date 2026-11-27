@@ -21,7 +21,7 @@ and should be opened with `?jury=1` to make the included stories directly
 available during a presentation. The ordinary route keeps the next practice
 story locked until the previous one is completed. `pack:site` rebuilds the demo
 and creates `dist.zip` next to `dist/`; the archive uses `/` entry separators
-and is rejected above 20 MiB.
+and is rejected above 20 000 000 bytes.
 
 The build copies the current static shell, selected content and a generated
 `content/manifest.json`; obsolete legacy login assets are intentionally excluded

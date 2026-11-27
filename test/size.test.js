@@ -3,9 +3,10 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { measureDist, renderReport, STARTUP_GZIP_LIMIT } from '../scripts/size.mjs';
+import { measureDist, renderReport, STARTUP_GZIP_LIMIT, MAX_FILE_BYTES } from '../scripts/size.mjs';
 
 test('size report separates payload categories and enforces the startup budget', () => {
+  assert.equal(MAX_FILE_BYTES, 20_000_000);
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'saulat-size-'));
   fs.mkdirSync(path.join(root, 'js'), { recursive: true });
   fs.mkdirSync(path.join(root, 'content'), { recursive: true });
@@ -21,6 +22,18 @@ test('size report separates payload categories and enforces the startup budget',
   assert.equal(result.categories.content.files, 1);
   assert.equal(result.categories.icons.files, 1);
   assert.ok(result.startup.gzip <= STARTUP_GZIP_LIMIT);
+  assert.deepEqual(result.oversizedFiles, []);
   assert.match(renderReport(result), /Стартовый набор/);
+  assert.match(renderReport(result), /File-size: PASS/);
   assert.match(renderReport(result), /Budget: PASS/);
+});
+
+test('size report identifies an individual file above 20,000,000 bytes', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'saulat-size-file-limit-'));
+  const file = path.join(root, 'too-big.bin');
+  fs.writeFileSync(file, 'x');
+  fs.truncateSync(file, MAX_FILE_BYTES + 1);
+  const result = measureDist(root);
+  assert.deepEqual(result.oversizedFiles, ['too-big.bin']);
+  assert.match(renderReport(result), /File-size: FAIL/);
 });

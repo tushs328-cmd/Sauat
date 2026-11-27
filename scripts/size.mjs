@@ -4,6 +4,7 @@ import zlib from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 
 export const STARTUP_GZIP_LIMIT = 1_500_000;
+export const MAX_FILE_BYTES = 20_000_000;
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const categories = ['HTML', 'JS', 'CSS', 'content', 'icons', 'прочее'];
 
@@ -50,8 +51,10 @@ export function measureDist(distRoot = path.join(projectRoot, 'dist')) {
   }
   const summary = Object.fromEntries(categories.map((category) => [category, emptySize()]));
   const startup = emptySize();
+  const oversizedFiles = [];
   for (const relative of walk(distRoot)) {
     const data = fs.readFileSync(path.join(distRoot, relative));
+    if (data.length > MAX_FILE_BYTES) oversizedFiles.push(relative.replaceAll(path.sep, '/'));
     addSize(summary[categoryFor(relative)], data);
     if (isStartupFile(relative)) addSize(startup, data);
   }
@@ -60,7 +63,7 @@ export function measureDist(distRoot = path.join(projectRoot, 'dist')) {
     acc.raw += summary[category].raw;
     acc.gzip += summary[category].gzip;
     return acc;
-  }, emptySize()) };
+  }, emptySize()), oversizedFiles };
 }
 
 export function formatBytes(bytes) {
@@ -80,6 +83,8 @@ export function renderReport(result) {
     '|---|---:|---:|---:|',
     ...rows,
     '',
+    `Лимит размера одного файла: ${MAX_FILE_BYTES.toLocaleString('ru-RU')} B.`,
+    result.oversizedFiles.length === 0 ? 'File-size: PASS' : `File-size: FAIL (${result.oversizedFiles.join(', ')})`,
     `Стартовый набор: ${formatBytes(result.startup.gzip)} gzip; лимит ${formatBytes(STARTUP_GZIP_LIMIT)} gzip.`,
     result.startup.gzip <= STARTUP_GZIP_LIMIT ? 'Budget: PASS' : 'Budget: FAIL'
   ].join('\n');
@@ -88,5 +93,5 @@ export function renderReport(result) {
 if (process.argv[1] && path.resolve(process.argv[1]) === path.resolve(fileURLToPath(import.meta.url))) {
   const result = measureDist(process.argv[2] ? path.resolve(process.argv[2]) : undefined);
   console.log(renderReport(result));
-  if (result.startup.gzip > STARTUP_GZIP_LIMIT) process.exitCode = 1;
+  if (result.startup.gzip > STARTUP_GZIP_LIMIT || result.oversizedFiles.length > 0) process.exitCode = 1;
 }

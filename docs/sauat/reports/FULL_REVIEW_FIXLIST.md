@@ -13,7 +13,7 @@
 - [x] Сделать cache key зависимым от manifest, shell, контента, ассетов и генератора,
       чтобы обновление приложения не застревало в старом SW-кэше.
 - [x] Добавить `npm run pack:site`: build demo → `dist.zip`, прямые `/`-слэши,
-      проверка лимита 20 MiB.
+      проверка лимита 20 000 000 байт.
 - [x] Оставить import/export локальным и ограниченным: schema validation,
       дедупликация, максимум 500 событий и 2 MiB на файл.
 - [x] Добавить targeted tests для ZIP, demo gating, jury isolation contract,

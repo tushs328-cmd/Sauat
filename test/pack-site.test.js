@@ -3,7 +3,12 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { packSite } from '../scripts/pack-site.mjs';
+import { packSite, DEFAULT_MAX_BYTES, MAX_FILE_BYTES } from '../scripts/pack-site.mjs';
+
+test('pack-site uses the 20,000,000-byte submission limit', () => {
+  assert.equal(DEFAULT_MAX_BYTES, 20_000_000);
+  assert.equal(MAX_FILE_BYTES, 20_000_000);
+});
 
 function centralNames(buffer) {
   const names = [];
@@ -49,4 +54,14 @@ test('pack-site rejects an invalid size limit', () => {
   fs.mkdirSync(dist, { recursive: true });
   fs.writeFileSync(path.join(dist, 'index.html'), 'ok');
   assert.throws(() => packSite({ distRoot: dist, output: path.join(root, 'dist.zip'), maxBytes: Number.NaN }), /положительным целым числом/);
+});
+
+test('pack-site rejects an individual file above 20,000,000 bytes', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'saulat-pack-file-limit-'));
+  const dist = path.join(root, 'dist');
+  fs.mkdirSync(dist, { recursive: true });
+  const file = path.join(dist, 'too-big.bin');
+  fs.writeFileSync(file, 'x');
+  fs.truncateSync(file, MAX_FILE_BYTES + 1);
+  assert.throws(() => packSite({ distRoot: dist, output: path.join(root, 'dist.zip') }), /Файл.*20 000 000/);
 });

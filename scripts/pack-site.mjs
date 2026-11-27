@@ -5,7 +5,8 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-export const DEFAULT_MAX_BYTES = 20 * 1024 * 1024;
+export const MAX_FILE_BYTES = 20_000_000;
+export const DEFAULT_MAX_BYTES = MAX_FILE_BYTES;
 
 function walk(root, relative = '') {
   return fs.readdirSync(path.join(root, relative), { withFileTypes: true }).flatMap((entry) => {
@@ -80,6 +81,7 @@ export function packSite({ distRoot = path.join(projectRoot, 'dist'), output = p
   const files = walk(distRoot).sort().map((relative) => {
     const absolute = path.join(distRoot, relative);
     const stat = fs.statSync(absolute);
+    if (stat.size > MAX_FILE_BYTES) throw new Error(`Файл ${relative} превышает лимит ${MAX_FILE_BYTES.toLocaleString('ru-RU').replaceAll('\u00a0', ' ')} B.`);
     return { relative, absolute, mtime: stat.mtime };
   });
   if (!files.length) throw new Error('dist пуст: архивировать нечего.');
