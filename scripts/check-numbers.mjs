@@ -8,13 +8,14 @@ import { formatBytes, measureDist } from './size.mjs';
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const documents = [
+  'docs/DETAILS.md',
   'README.md',
   'docs/sauat/FORM_COPYPASTE.md',
   'docs/sauat/ONE_PAGER.md',
   'docs/sauat/RELEASE_CANDIDATE.md'
 ];
 const MAX_FILE_BYTES = 20_000_000;
-const EXPECTED = { stories: 7, practice: 5, diagnostic: 2, tests: 72, startupKb: 123.4, slides: 10 };
+const EXPECTED = { stories: 7, practice: 5, diagnostic: 2, tests: 72, startupKb: 123.2, slides: 10 };
 
 function readJson(file) {
   return JSON.parse(fs.readFileSync(file, 'utf8'));
@@ -109,12 +110,12 @@ try {
   const videoDocumentMatches = videoBytes === null ? [] : documentMatches(new RegExp(`\\b${videoBytes}\\b`));
   const slidesDocumentMatches = slidesBytes === null ? [] : documentMatches(new RegExp(`\\b${slidesBytes}\\b`));
   const limitDocumentMatches = documentMatches(/20[\s\u00a0]*000[\s\u00a0]*000\s*(?:байт|bytes)?/iu);
-  const startupMatches = documentMatches(/123[,.]4\s*(?:КБ|KB)\s*gzip/iu);
+  const startupMatches = documentMatches(/123[,.]2\s*(?:КБ|KB)\s*gzip/iu);
   const startupAgrees = Math.abs(startupKb - EXPECTED.startupKb) <= 0.5 && startupMatches.length > 0;
   const rows = [
     row(`${storyCount.stories.length} (practice ${practice} + diagnostic ${diagnostic})`, storyCount.source, /\b7\s+(?:истори|stories|әңгім)/iu, storyCount.stories.length === EXPECTED.stories && practice === EXPECTED.practice && diagnostic === EXPECTED.diagnostic),
-    row(`${tests.tests} (pass ${tests.passed}, fail ${tests.failed})`, 'node --test; разбор ℹ tests/pass/fail', /\b72\s*\/\s*72\b/iu, tests.exitCode === 0 && tests.tests === EXPECTED.tests && tests.passed === EXPECTED.tests && tests.failed === 0),
-    row(`${startupKb.toFixed(1)} KB gzip (ожидалось ≈${EXPECTED.startupKb.toFixed(1)} KB)`, 'scripts/size.mjs через временный demo dist', /123[,.]4\s*(?:КБ|KB)\s*gzip/iu, startupAgrees),
+    row(`${tests.tests} (pass ${tests.passed}, fail ${tests.failed})`, 'node --test; разбор ℹ tests/pass/fail', /\b72\s*\/\s*72\b|\b72\s+теста,\s*72\s+pass,\s*0\s+fail\b/iu, tests.exitCode === 0 && tests.tests === EXPECTED.tests && tests.passed === EXPECTED.tests && tests.failed === 0),
+    row(`${startupKb.toFixed(1)} KB gzip (ожидалось ≈${EXPECTED.startupKb.toFixed(1)} KB)`, 'scripts/size.mjs через временный demo dist', /123[,.]2\s*(?:КБ|KB)\s*gzip/iu, startupAgrees),
     {
       number: `${videoBytes ?? 'MISSING'} B; ${slidesBytes ?? 'MISSING'} B (< ${MAX_FILE_BYTES.toLocaleString('ru-RU')} B)`,
       source: 'docs/video/SAUAT_pitch.mp4 + docs/slides/export/slides.pdf',

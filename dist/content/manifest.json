@@ -1,0 +1,109 @@
+{
+  "contentVersion": 3,
+  "stories": [
+    {
+      "id": "case_001",
+      "kind": "practice",
+      "file": "case_001.json",
+      "assets": [
+        "assets/c01_issyk_reconstruction.svg"
+      ],
+      "reviewStatus": {
+        "kk": "draft",
+        "ru": "draft"
+      },
+      "title": {
+        "kk": "Алтын адам: олжа және болжам",
+        "ru": "Золотой человек: находка и гипотеза"
+      }
+    },
+    {
+      "id": "case_002",
+      "kind": "practice",
+      "file": "case_002.json",
+      "assets": [
+        "assets/c02_aral_reconstruction.svg"
+      ],
+      "reviewStatus": {
+        "kk": "draft",
+        "ru": "draft"
+      },
+      "title": {
+        "kk": "Арал теңізі: кемелер неге шөлде қалды?",
+        "ru": "Аральское море: почему корабли оказались в пустыне?"
+      }
+    },
+    {
+      "id": "case_003",
+      "kind": "practice",
+      "file": "case_003.json",
+      "assets": [
+        "assets/case_003_reconstruction.svg"
+      ],
+      "reviewStatus": {
+        "kk": "draft",
+        "ru": "draft"
+      },
+      "title": {
+        "kk": "Байқоңыр: Қазақстанның ғарыш тарихы",
+        "ru": "Байконур: космическая история Казахстана"
+      }
+    },
+    {
+      "id": "case_004",
+      "kind": "practice",
+      "file": "case_004.json",
+      "assets": [],
+      "reviewStatus": {
+        "kk": "draft",
+        "ru": "draft"
+      },
+      "title": {
+        "kk": "Үйде суды үнемдеу: ресми кеңестер",
+        "ru": "Экономим воду дома: официальные рекомендации"
+      }
+    },
+    {
+      "id": "case_005",
+      "kind": "practice",
+      "file": "case_005.json",
+      "assets": [],
+      "reviewStatus": {
+        "kk": "draft",
+        "ru": "draft"
+      },
+      "title": {
+        "kk": "Жер сілкінісі кезіндегі қауіпсіздік",
+        "ru": "Безопасность при землетрясении"
+      }
+    },
+    {
+      "id": "diag_entry_001",
+      "kind": "diagnostic",
+      "file": "diag_entry_001.json",
+      "assets": [],
+      "reviewStatus": {
+        "kk": "draft",
+        "ru": "draft"
+      },
+      "title": {
+        "kk": "Диагностикалық тапсырма: кесте мен хабарламаны оқу",
+        "ru": "Диагностика: читаем расписание и объявление"
+      }
+    },
+    {
+      "id": "diag_exit_001",
+      "kind": "diagnostic",
+      "file": "diag_exit_001.json",
+      "assets": [],
+      "reviewStatus": {
+        "kk": "draft",
+        "ru": "draft"
+      },
+      "title": {
+        "kk": "Диагностикалық тапсырма: шығындар кестесі мен нұсқаулық",
+        "ru": "Диагностика: таблица расходов и инструкция"
+      }
+    }
+  ]
+}

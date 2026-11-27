@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 560" role="img" aria-labelledby="title desc">
+  <title id="title">Схематичная реконструкция Иссыкского кургана и музейной витрины</title>
+  <desc id="desc">Курган, витрина с золотыми украшениями и серебряной чашей. Лицо и пол погребённого не изображены.</desc>
+  <defs>
+    <linearGradient id="sky" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#d8eee4"/><stop offset="1" stop-color="#f7dc9c"/></linearGradient>
+    <linearGradient id="glass" x1="0" x2="0" y1="0" y2="1"><stop stop-color="#ffffff" stop-opacity=".74"/><stop offset="1" stop-color="#bde0d5" stop-opacity=".34"/></linearGradient>
+  </defs>
+  <rect width="960" height="560" rx="38" fill="url(#sky)"/>
+  <path d="M0 404c135-58 240-67 352-12 108 53 209 55 332 5 102-42 184-38 276 8v155H0Z" fill="#37645d" opacity=".92"/>
+  <path d="M80 402c116-103 265-105 397 4-128-28-259-29-397-4Z" fill="#274842"/>
+  <path d="M132 388c98-74 202-74 302 4" fill="none" stroke="#d5a125" stroke-width="7" stroke-linecap="round" opacity=".8"/>
+  <g transform="translate(550 126)">
+    <rect width="308" height="282" rx="20" fill="url(#glass)" stroke="#203c38" stroke-width="7"/>
+    <path d="M20 232h268M36 28v204M272 28v204" fill="none" stroke="#203c38" stroke-width="5" opacity=".7"/>
+    <path d="M74 214c8-45 18-75 35-104 18-31 46-30 64 0 15 26 24 58 31 104" fill="none" stroke="#d5a125" stroke-width="18" stroke-linecap="round"/>
+    <path d="M110 108 139 58l29 50-29 27Z" fill="#f3c74d" stroke="#8d6710" stroke-width="4"/>
+    <circle cx="110" cy="165" r="13" fill="#f3c74d"/><circle cx="180" cy="165" r="13" fill="#f3c74d"/>
+    <path d="M210 192c21-12 49-12 70 0l-10 27h-50Z" fill="#d5a125" stroke="#8d6710" stroke-width="4"/>
+    <path d="M225 185c8-16 33-16 41 0" fill="none" stroke="#203c38" stroke-width="4"/>
+  </g>
+  <path d="M467 452h412" stroke="#f5f2e8" stroke-width="6" opacity=".8"/>
+</svg>

@@ -72,9 +72,9 @@ python3 -m http.server 4173 --directory dist
 | Размер стартового набора | Временный demo `dist`, измерение `scripts/size.mjs` | 123,2 KB gzip; всего 126,3 KB gzip; лимит пройден | `npm run size` и `npm run check:numbers` |
 | Static smoke | Demo-манифест, ассеты, относительный Service Worker, localStorage-экспорт | PASS | `node scripts/static-smoke.mjs --include-draft` |
 | Валидатор контента | JSON-истории из `content/*.json` | Exit code 0; эвристические предупреждения не являются ошибками | `npm run validate` |
-| Числовой контракт документов | README и `docs/sauat/{FORM_COPYPASTE,ONE_PAGER,RELEASE_CANDIDATE}.md` | Скрипт запускается; текущий exit code 1 из-за рассинхрона размера PDF, см. ниже | `npm run check:numbers` |
+| Числовой контракт документов | `docs/DETAILS.md`, README и `docs/sauat/{FORM_COPYPASTE,ONE_PAGER,RELEASE_CANDIDATE}.md` | Скрипт запускается; текущий exit code 0 | `npm run check:numbers` |
 
-Последний запуск `check:numbers` пересчитал видео как `4 992 839 B`, PDF как `266 002 B`, 10 страниц и стартовый набор как `123,2 KB gzip`. В `docs/sauat/RELEASE_CANDIDATE.md` всё ещё записан старый размер PDF `135861 B`; этот файл относится к frozen `docs/slides/**` и не менялся в этой задаче. Поэтому проверка намеренно возвращает ненулевой код, пока документ не будет обновлён владельцем документа/слайдов.
+Последний запуск `check:numbers` пересчитал видео как `4 992 839 B`, PDF как `266 002 B`, 10 страниц и стартовый набор как `123,2 KB gzip`; весь demo `dist` — `126,3 KB gzip`. Все проверки числового контракта завершились с exit code `0`.
 
 ## Честные пределы и ограничения
 

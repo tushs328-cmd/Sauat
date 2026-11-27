@@ -300,3 +300,11 @@ html[data-theme="dark"] .mode-corner .jury-badge { color: #bfe6de; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition-duration: .01ms !important; animation-duration: .01ms !important; }
 }
+
+.brand { flex: 0 0 auto; white-space: nowrap; }
+.brand > span:last-child, .brand strong { min-width: 0; white-space: nowrap; }
+.top-actions { min-width: 0; flex: 0 1 auto; }
+.primary-button, .secondary-button { white-space: nowrap; }
+.primary-button > span[aria-hidden="true"], .secondary-button > span[aria-hidden="true"] { flex: 0 0 auto; font-size: 18px; line-height: 1; }
+.story-image img, .reveal-image img { aspect-ratio: 4 / 3; height: auto; object-fit: cover; }
+.landing-hero .hero-image img { aspect-ratio: 16 / 9; height: 100%; object-fit: cover; }
