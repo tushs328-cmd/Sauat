@@ -100,6 +100,10 @@
     .controls .counter { min-width: 66px; color: var(--ink); text-align: center; font-size: 19px; font-weight: 850; }
     .link-row { margin-top: 2.2vh; font-size: 19px; line-height: 1.3; }
     .controls .print { padding: 0 14px; border-radius: 999px; }
+    .ai-disclosure { margin-top: 2.2vh; font-size: 19px; line-height: 1.22; }
+    .ai-disclosure span { display: block; }
+    .ai-disclosure span + span { margin-top: 7px; }
+    .ai-disclosure strong { color: var(--ink); }
     @media (max-width: 760px) {
       body { overflow: auto; }
       .slide { height: auto; min-height: 100vh; padding: 30px 24px 74px; }
@@ -254,7 +258,12 @@
           <div>
             <p class="big-line">Наблюдаемые свойства MVP</p>
             <p class="small-copy">Это не рейтинг и не обещание измеренного превосходства: отличия видны в текущем клиентском сценарии и импортированных событиях. Стартовый набор — около 123 КБ gzip.</p>
-            <p class="source">ИИ-инструменты: локальная Ollama, rules fallback, Claude для контента и QA, Playwright для браузерной проверки.</p>
+            <p class="source ai-disclosure">
+              <span><strong>ИИ-инструменты разработки:</strong> Codex и ChatGPT (код, ревью, тесты, тексты), Claude (руководство разработкой, проверка, контент), OpenAI ImageGen (иллюстрация главного экрана), ElevenLabs (озвучка питч-видео).</span>
+              <span><strong>ИИ в продукте:</strong> локальная Ollama (qwen2.5:1.5b) только в локальной серверной версии; в публичном демо — встроенные правила (rules), не ИИ.</span>
+              <span><strong>Библиотеки:</strong> Express, Ajv, Playwright (тестирование).</span>
+              <span><strong>Визуальная методика:</strong> unslop (CC BY 4.0, Дамир Соколовский).</span>
+            </p>
           </div>
         </div>
       </div>
